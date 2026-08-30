@@ -15,15 +15,25 @@ export default defineConfig(() => {
           name: 'Volleyball Strength',
           short_name: 'VB Strength',
           description: 'A 12-week strength and power training programme for volleyball players.',
-          theme_color: '#fafafa',
-          background_color: '#fafafa',
+          theme_color: '#2a2ae0',
+          background_color: '#2a2ae0',
           display: 'standalone',
           icons: [
             {
-              src: '/icon.svg',
-              sizes: '192x192 512x512',
-              type: 'image/svg+xml',
-              purpose: 'any maskable'
+              src: '/pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png'
+            },
+            {
+              src: '/pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png'
+            },
+            {
+              src: '/pwa-maskable-512x512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable'
             }
           ]
         }

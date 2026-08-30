@@ -1,5 +1,28 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* GO Club-inspired palette */
+  --color-court: #2a2ae0; /* ultramarine app background */
+  --color-court-deep: #1e1eb8; /* pressed / recessed surfaces */
+  --color-flame: #ff3d2e; /* red-orange display accent */
+  --color-mint: #7bf1a8; /* progress + completed */
+  --color-zest: #f7e353; /* small meta highlights */
+  --color-mist: #b9b9f2; /* secondary text on blue */
+}
+
+@layer base {
+  body {
+    @apply bg-court text-white antialiased;
+    letter-spacing: -0.01em;
+  }
+
+  input::placeholder {
+    @apply text-white/30;
+  }
+}
+
 @layer utilities {
   .scrollbar-hide {
     /* IE and Edge */
@@ -12,4 +35,3 @@
     display: none;
   }
 }
-

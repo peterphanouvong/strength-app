@@ -1,201 +1,235 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { ChevronRight, CheckCircle2, Trophy, Calendar, Dumbbell, Activity } from 'lucide-react';
-import { TRAINING_PLAN, WeekPlan, WorkoutDay } from '../data';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { ChevronLeft, Check, Play } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { TRAINING_PLAN, IN_SEASON_ADJUSTMENTS, WorkoutDay } from '../data';
 import { cn } from '../lib/utils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { Link } from 'react-router-dom';
+import { PROGRESS_KEY, ProgressMap, getDayProgress } from '../lib/progress';
+import { BLOCK_TEXT_COLOR } from './WeeksPage';
 
-type SetLog = {
-  completed: boolean;
-  weight?: string;
-  actualReps?: string;
-};
+// Poster panel palettes, cycled per day
+const POSTERS = [
+  'bg-zest text-court-deep',
+  'bg-mint text-court-deep',
+  'bg-white text-court',
+  'bg-mist text-court-deep',
+];
+
+function posterWords(title: string): string[] {
+  const name = (title.split(': ')[1] || title).split(' (')[0].split(' + ')[0];
+  return name.toUpperCase().split(' ');
+}
 
 export default function WeekOverview() {
-  const [selectedWeek, setSelectedWeek] = useLocalStorage<number>('volleyball-selected-week', 1);
-  const [completedSets] = useLocalStorage<Record<string, SetLog>>('volleyball-workout-progress-v2', {});
+  const { weekNumber } = useParams<{ weekNumber: string }>();
+  const navigate = useNavigate();
+  const [completedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
 
-  const currentWeekPlan = TRAINING_PLAN.find((w) => w.weekNumber === selectedWeek) || TRAINING_PLAN[0];
+  const week = TRAINING_PLAN.find((w) => w.weekNumber === Number(weekNumber));
 
-  const getDayProgress = (day: WorkoutDay) => {
-    let totalSets = 0;
-    let completed = 0;
-    day.exercises.forEach((ex) => {
-      totalSets += ex.sets;
-      for (let i = 0; i < ex.sets; i++) {
-        if (completedSets[`${ex.id}-${i}`]?.completed) completed++;
-      }
-    });
-    return { total: totalSets, completed, percentage: totalSets === 0 ? 0 : Math.round((completed / totalSets) * 100) };
-  };
+  if (!week) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+        <p className="text-mist">Week not found.</p>
+        <Link to="/" className="text-white font-bold underline">
+          Back to programme
+        </Link>
+      </div>
+    );
+  }
 
-  const getWeekProgress = (week: WeekPlan) => {
-    let totalSets = 0;
-    let completed = 0;
-    week.days.forEach(day => {
-      day.exercises.forEach(ex => {
-         totalSets += ex.sets;
-         for (let i = 0; i < ex.sets; i++) {
-          if (completedSets[`${ex.id}-${i}`]?.completed) completed++;
-        }
-      });
-    });
-    return { total: totalSets, completed, percentage: totalSets === 0 ? 0 : Math.round((completed / totalSets) * 100) };
-  };
-
-  const weekProgress = getWeekProgress(currentWeekPlan);
+  const blockName = week.block.substring(4);
 
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-900 font-sans selection:bg-neutral-200">
-      {/* Header */}
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-20">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-neutral-900 text-white rounded-xl flex items-center justify-center shadow-sm">
-              <Activity className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="font-semibold text-lg leading-tight">Volleyball Strength</h1>
-              <p className="text-xs text-neutral-500 font-medium">12-Week Programme</p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 pb-24">
-        
-        {/* Week Selector & Overview */}
-        <div className="mb-8">
-          <div className="flex items-end justify-between mb-4">
-            <div>
-              <h2 className="text-sm font-medium text-neutral-500 uppercase tracking-wider mb-1">Block {currentWeekPlan.block.charAt(0)}</h2>
-              <h3 className="text-3xl font-bold tracking-tight">Week {currentWeekPlan.weekNumber}</h3>
-            </div>
-            
-            <div className="text-right">
-              <span className="text-2xl font-bold">{weekProgress.percentage}%</span>
-              <p className="text-xs text-neutral-500 font-medium">completed</p>
-            </div>
-          </div>
-          
-          <div className="w-full bg-neutral-200 rounded-full h-2.5 mb-6 overflow-hidden">
-            <motion.div 
-              className="bg-neutral-900 h-2.5 rounded-full" 
-              initial={{ width: 0 }}
-              animate={{ width: `${weekProgress.percentage}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            />
-          </div>
-
-          <div className="flex overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 gap-2 scrollbar-hide">
-            {TRAINING_PLAN.map((week) => {
-              const p = getWeekProgress(week);
-              const isSelected = week.weekNumber === selectedWeek;
-              return (
-                <button
-                  key={week.id}
-                  onClick={() => setSelectedWeek(week.weekNumber)}
-                  className={cn(
-                    "flex-shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-2xl border transition-all duration-200",
-                    isSelected 
-                      ? "border-neutral-900 bg-neutral-900 text-white shadow-md" 
-                      : "border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50"
-                  )}
-                >
-                  <span className="text-xs font-medium">Wk {week.weekNumber}</span>
-                  {p.percentage === 100 && (
-                    <Trophy className={cn("w-3.5 h-3.5 mt-1", isSelected ? "text-neutral-300" : "text-neutral-900")} />
-                  )}
-                  {p.percentage > 0 && p.percentage < 100 && (
-                    <div className={cn("w-1.5 h-1.5 rounded-full mt-1.5", isSelected ? "bg-neutral-400" : "bg-neutral-900")} />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-neutral-200 mt-2 shadow-sm">
-            <h4 className="font-semibold text-neutral-900 mb-2 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-neutral-500" />
-              Focus: {currentWeekPlan.block.substring(4)}
-            </h4>
-            <p className="text-sm text-neutral-600 leading-relaxed">
-              {currentWeekPlan.focus}
-            </p>
-          </div>
+    <div className="min-h-screen">
+      <main className="max-w-xl mx-auto px-5 pt-6 pb-16">
+        {/* Top bar */}
+        <div className="flex items-center justify-between mb-8">
+          <button
+            onClick={() => navigate('/')}
+            aria-label="Back to programme"
+            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-mist">
+            Block {week.block.charAt(0)} · {blockName}
+          </span>
         </div>
 
-        {/* Days List */}
+        {/* Title */}
+        <header className="mb-8">
+          <h1 className="text-[2.5rem] leading-none font-bold tracking-[-0.03em] mb-1">
+            Week {week.weekNumber}
+          </h1>
+          <h2
+            className={cn(
+              'text-2xl font-bold tracking-[-0.02em] uppercase',
+              BLOCK_TEXT_COLOR[blockName]
+            )}
+          >
+            {blockName}
+          </h2>
+          <WeekInfoTabs week={week} />
+          <div className="border-t border-dashed border-white/30 mt-5" />
+        </header>
+
+        {/* Day cards */}
         <div className="space-y-4">
-          {currentWeekPlan.days.map((day) => {
-             const progress = getDayProgress(day);
-             return (
-               <DayCard 
-                 key={day.id} 
-                 day={day} 
-                 progress={progress}
-                 weekNumber={currentWeekPlan.weekNumber}
-               />
-             )
-          })}
+          {week.days.map((day, index) => (
+            <DayCard key={day.id} day={day} index={index} completedSets={completedSets} />
+          ))}
         </div>
+        <p className="text-center text-[0.6875rem] font-medium text-mist mt-5">
+          Tap a session to start the workout.
+        </p>
 
       </main>
     </div>
   );
 }
 
-const DayCard: React.FC<{ 
-  day: WorkoutDay, 
-  progress: { total: number, completed: number, percentage: number },
-  weekNumber: number
-}> = ({ day, progress, weekNumber }) => {
-  const isFullyCompleted = progress.total > 0 && progress.percentage === 100;
+type InfoTab = 'week' | 'goal' | 'jumps' | 'season';
+
+const INFO_TABS: { id: InfoTab; label: string }[] = [
+  { id: 'week', label: 'This week' },
+  { id: 'goal', label: 'Block goal' },
+  { id: 'jumps', label: 'Jumps' },
+  { id: 'season', label: 'In-season' },
+];
+
+const WeekInfoTabs: React.FC<{ week: (typeof TRAINING_PLAN)[number] }> = ({ week }) => {
+  const [active, setActive] = useState<InfoTab>('week');
 
   return (
-    <Link 
-      to={`/workout/${day.id}`}
-      className={cn(
-        "block bg-white rounded-2xl border overflow-hidden transition-all duration-300 active:scale-[0.98]",
-        isFullyCompleted ? "border-neutral-300 bg-neutral-50" : "border-neutral-200 shadow-sm hover:border-neutral-300 hover:shadow-md"
-      )}
-    >
-      <div className="w-full p-5 flex items-center justify-between text-left">
-        <div className="flex-1 pr-4">
-          <div className="flex items-center gap-3 mb-1">
-             <span className={cn(
-               "px-2.5 py-0.5 rounded-md text-xs font-bold tracking-wider",
-               isFullyCompleted ? "bg-neutral-200 text-neutral-600" : "bg-neutral-900 text-white"
-             )}>
-               DAY {day.day}
-             </span>
-             {isFullyCompleted && <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5"/> Complete</span>}
-          </div>
-          <h3 className={cn("text-lg font-semibold", isFullyCompleted && "text-neutral-600")}>
-            {day.title.split(': ')[1] || day.title}
-          </h3>
-          
-          <div className="flex items-center gap-4 mt-3">
-             <div className="flex items-center gap-1.5 text-sm text-neutral-500">
-               <Dumbbell className="w-4 h-4" />
-               <span>{day.exercises.length} exercises</span>
-             </div>
-             <div className="flex items-center gap-2 flex-1 max-w-[120px]">
-                <div className="flex-1 bg-neutral-200 rounded-full h-1.5 overflow-hidden">
-                  <div 
-                    className={cn("h-full rounded-full transition-all duration-500", isFullyCompleted ? "bg-neutral-400" : "bg-neutral-900")} 
-                    style={{ width: `${progress.percentage}%` }} 
-                  />
+    <div className="mt-4">
+      <div className="flex gap-2 flex-wrap">
+        {INFO_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActive(tab.id)}
+            className={cn(
+              'px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors',
+              active === tab.id ? 'bg-white text-court' : 'bg-white/10 text-mist hover:bg-white/20'
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={active}
+          className="mt-3 text-sm leading-relaxed"
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.18 }}
+        >
+          {active === 'week' && <p className="text-white font-medium">{week.focus}</p>}
+          {active === 'goal' && <p className="text-mist">{week.blockNote}</p>}
+          {active === 'jumps' && <p className="text-mist">{week.jumpsNote}</p>}
+          {active === 'season' && (
+            <div className="space-y-3">
+              <p className="text-xs text-mist">
+                If you're on court 3+ times a week, or the comp calendar tightens:
+              </p>
+              {IN_SEASON_ADJUSTMENTS.map((adj) => (
+                <div key={adj.title}>
+                  <p className="font-bold text-zest">{adj.title}</p>
+                  <p className="text-mist">{adj.body}</p>
                 </div>
-                <span className="text-xs font-medium text-neutral-500 w-8 text-right">{progress.completed}/{progress.total}</span>
-             </div>
-          </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: ProgressMap }> = ({
+  day,
+  index,
+  completedSets,
+}) => {
+  const reduceMotion = useReducedMotion();
+  const progress = getDayProgress(day, completedSets);
+  const done = progress.total > 0 && progress.percentage === 100;
+  const started = progress.completed > 0 && !done;
+  const [letter, name] = day.title.split(': ');
+  const words = posterWords(day.title);
+
+  return (
+    <motion.div
+      initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.1 + index * 0.07, ease: 'easeOut' }}
+    >
+    <Link
+      to={`/workout/${day.id}`}
+      className="flex bg-white/10 rounded-2xl overflow-hidden transition-transform active:scale-[0.98] hover:bg-white/15"
+    >
+      {/* Poster panel */}
+      <div
+        className={cn(
+          'w-28 flex-shrink-0 px-3 py-4 flex flex-col justify-center',
+          POSTERS[index % POSTERS.length]
+        )}
+      >
+        {words.map((word) => (
+          <span
+            key={word}
+            className="block text-[0.9375rem] font-bold uppercase leading-[1.1] tracking-[-0.02em]"
+          >
+            {word}
+          </span>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[0.625rem] font-bold uppercase tracking-[0.18em] text-mist">
+            {letter}
+          </p>
+          {done ? (
+            <span className="w-6 h-6 rounded-full bg-mint text-court-deep flex items-center justify-center flex-shrink-0">
+              <Check className="w-3.5 h-3.5" strokeWidth={3} />
+            </span>
+          ) : (
+            <span
+              className={cn(
+                'flex items-center gap-1 text-[0.6875rem] font-bold px-2.5 py-1 rounded-full flex-shrink-0',
+                started ? 'bg-zest text-court-deep' : 'bg-mint text-court-deep'
+              )}
+            >
+              <Play className="w-3 h-3 fill-current" />
+              {started ? 'Resume' : 'Start'}
+            </span>
+          )}
         </div>
-        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-neutral-50 text-neutral-400">
-          <ChevronRight className="w-5 h-5" />
+        <h3 className="text-[1.0625rem] font-bold tracking-[-0.02em] leading-snug mt-0.5 truncate">
+          {name}
+        </h3>
+        <p className="text-xs text-mist mt-1">
+          {day.exercises.length} exercises · {progress.total} sets
+        </p>
+        <div className="flex items-center gap-2 mt-3">
+          <div className="flex-1 h-2 rounded-full bg-court-deep/60 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-mint transition-all duration-500"
+              style={{ width: `${progress.percentage}%` }}
+            />
+          </div>
+          <span className="text-[0.6875rem] font-bold text-mist tabular-nums">
+            {progress.completed}/{progress.total}
+          </span>
         </div>
       </div>
     </Link>
+    </motion.div>
   );
-}
+};
