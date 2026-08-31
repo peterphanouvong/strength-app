@@ -11,6 +11,12 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        workbox: {
+          // Service-worker-side rest-timer scheduling: the page's interval is
+          // frozen while the PWA is backgrounded, so expiry notifications are
+          // fired from the worker (see public/sw-rest-timer.js).
+          importScripts: ['sw-rest-timer.js'],
+        },
         manifest: {
           name: 'Volleyball Strength',
           short_name: 'VB Strength',

@@ -1,4 +1,10 @@
-import { hapticRestOver, playRestOver, notifyRestOver } from './feedback';
+import {
+  hapticRestOver,
+  playRestOver,
+  notifyRestOver,
+  scheduleRestOverNotification,
+  cancelRestOverNotification,
+} from './feedback';
 
 export type RestState = { endsAt: number; total: number; label: string };
 
@@ -37,6 +43,11 @@ function tick() {
     hapticRestOver();
     playRestOver();
     if (document.visibilityState !== 'visible') void notifyRestOver(label);
+    // This tick ran, so the page is awake and the feedback above covered
+    // expiry — call off the service-worker backstop before its grace window
+    // ends. When a backgrounded PWA is frozen, this tick never runs and the
+    // worker (public/sw-rest-timer.js) fires the notification instead.
+    void cancelRestOverNotification();
   } else {
     remaining = next;
   }
@@ -49,6 +60,9 @@ export function startRest(state: RestState) {
   remaining = Math.max(0, Math.ceil((state.endsAt - Date.now()) / 1000));
   stopInterval();
   interval = window.setInterval(tick, 250);
+  // The interval above stops running when a backgrounded PWA is frozen, so the
+  // expiry notification is scheduled in the service worker, which stays awake.
+  void scheduleRestOverNotification(state.endsAt, state.label);
   emit();
 }
 
@@ -56,6 +70,7 @@ export function startRest(state: RestState) {
 export function extendRest(seconds: number) {
   if (!rest) return;
   rest = { ...rest, endsAt: rest.endsAt + seconds * 1000, total: rest.total + seconds };
+  void scheduleRestOverNotification(rest.endsAt, rest.label);
   tick();
 }
 
@@ -65,6 +80,7 @@ export function skipRest() {
   rest = null;
   remaining = 0;
   stopInterval();
+  void cancelRestOverNotification();
   emit();
 }
 

@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type BrowserContext } from '@playwright/test';
 import { readStorage, seedStorage, PROGRESS_KEY, SESSION_KEY, type SetLog } from './helpers/fixtures';
 
 // Q1 — invalid /workout/:id must not start a phantom session (docs/gauntlet/ANSWER_KEY.md Q1).
@@ -307,5 +307,116 @@ test.describe('Q1 — unknown /complete/:id shows not-found, not a broken header
     await page.goto('/complete/w1-d1');
     await expect(page.getByText(/Week 1 ·/)).toBeVisible();
     await expect(page.getByText('Workout not found.')).toHaveCount(0);
+  });
+});
+
+// Q1 — rest-end notification must fire while the app is backgrounded (docs/gauntlet/ANSWER_KEY.md Q1).
+// Pre-fix, the alert was driven only by the page's foreground interval
+// (src/lib/rest.ts tick): a frozen/backgrounded PWA runs no ticks at expiry,
+// and the first post-resume tick sees visibilityState 'visible' and skips
+// notifyRestOver — so the promised notification never appeared. Post-fix the
+// schedule lives in the service worker (public/sw-rest-timer.js), which keeps
+// running while the page is suspended; the page cancels it whenever its own
+// tick handles expiry, so foreground behavior is unchanged.
+//
+// Real notification permission cannot be granted headless, so these tests
+// stub registration.showNotification inside the service worker itself and
+// assert on recorded calls (same spirit as the confirming probe's spy).
+
+test.describe('Q1 — rest-end notification fires while the page is frozen', () => {
+  type NotifCall = { title: string; tag?: string };
+
+  /** Wait for the app's SW, then replace its showNotification with a recorder. */
+  async function stubRestSW(page: Page, context: BrowserContext) {
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+    });
+    const sw = context.serviceWorkers().find((w) => w.url().endsWith('/sw.js'));
+    if (!sw) throw new Error('app service worker not found');
+    await sw.evaluate(() => {
+      const s = self as unknown as { __restNotifs: NotifCall[]; registration: ServiceWorkerRegistration };
+      s.__restNotifs = [];
+      (s.registration as unknown as { showNotification: unknown }).showNotification = async (
+        title: string,
+        opts?: { tag?: string }
+      ) => {
+        s.__restNotifs.push({ title, tag: opts?.tag });
+      };
+    });
+    return {
+      calls: (): Promise<NotifCall[]> =>
+        sw.evaluate(() => (self as unknown as { __restNotifs: NotifCall[] }).__restNotifs),
+    };
+  }
+
+  async function startShortRest(page: Page) {
+    await page.goto('/workout/w1-d1');
+    await expect(page.getByRole('heading', { name: /Hang Power Clean/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Mark set complete' }).first().click();
+    await expect(page.locator('div.fixed.bottom-4').filter({ hasText: 'Rest ·' })).toBeVisible();
+  }
+
+  test('SW shows the rest-over notification across a freeze + resume cycle spanning expiry', async ({
+    page,
+    context,
+  }) => {
+    await seedStorage(page, { rest: { 'Hang Power Clean': 2 } });
+    await page.goto('/workout/w1-d1');
+    const sw = await stubRestSW(page, context);
+    await startShortRest(page);
+
+    // Suspend page JS across expiry — what backgrounding/locking does to an
+    // installed PWA (no page timers run until resume; the SW keeps running).
+    // Page.setWebLifecycleState 'frozen' is a silent no-op on a visible
+    // headless page, so script-execution-disabled is the faithful emulation.
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Emulation.setScriptExecutionDisabled', { value: true });
+    await new Promise((resolve) => setTimeout(resolve, 4_000)); // 2s rest + SW grace, suspended throughout
+    await cdp.send('Emulation.setScriptExecutionDisabled', { value: false });
+
+    // The worker fired the alert while the page slept.
+    await expect
+      .poll(async () => (await sw.calls()).map((c) => c.title), { timeout: 3_000 })
+      .toContain('Rest over — back to work');
+    const calls = await sw.calls();
+    expect(calls.every((c) => c.tag === 'rest-timer')).toBe(true);
+  });
+
+  test('foreground expiry stays notification-free: the awake page cancels the SW backstop', async ({
+    page,
+    context,
+  }) => {
+    await seedStorage(page, { rest: { 'Hang Power Clean': 2 } });
+    await page.goto('/workout/w1-d1');
+    const sw = await stubRestSW(page, context);
+    await startShortRest(page);
+
+    // Let the rest expire with the page visible and running (bar auto-dismisses),
+    // then wait well past the SW grace window.
+    await expect(page.locator('div.fixed.bottom-4').filter({ hasText: 'Rest ·' })).toHaveCount(0, {
+      timeout: 6_000,
+    });
+    await page.waitForTimeout(1_500);
+    expect(await sw.calls()).toHaveLength(0);
+  });
+
+  test('skipping rest cancels the scheduled SW notification', async ({ page, context }) => {
+    await seedStorage(page, { rest: { 'Hang Power Clean': 2 } });
+    await page.goto('/workout/w1-d1');
+    const sw = await stubRestSW(page, context);
+    await startShortRest(page);
+
+    await page
+      .locator('div.fixed.bottom-4')
+      .filter({ hasText: 'Rest ·' })
+      .getByRole('button', { name: 'Skip rest' })
+      .click();
+
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Emulation.setScriptExecutionDisabled', { value: true });
+    await new Promise((resolve) => setTimeout(resolve, 4_000));
+    await cdp.send('Emulation.setScriptExecutionDisabled', { value: false });
+
+    expect(await sw.calls()).toHaveLength(0);
   });
 });
