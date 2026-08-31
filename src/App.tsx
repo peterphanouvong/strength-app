@@ -4,6 +4,7 @@ import WeeksPage from './pages/WeeksPage';
 import WeekOverview from './pages/WeekOverview';
 import WorkoutPage from './pages/WorkoutPage';
 import CompletionPage from './pages/CompletionPage';
+import { ActiveWorkoutPill } from './components/ActiveWorkoutPill';
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
         <Route path="/workout/:id" element={<WorkoutPage />} />
         <Route path="/complete/:id" element={<CompletionPage />} />
       </Routes>
+      <ActiveWorkoutPill />
     </BrowserRouter>
   );
 }

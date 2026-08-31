@@ -7,6 +7,7 @@ import { cn } from '../lib/utils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { PROGRESS_KEY, ProgressMap, getWeekProgress } from '../lib/progress';
 import { hapticSelect } from '../lib/feedback';
+import { useEntranceOnce } from '../lib/animation';
 
 type BlockGroup = {
   name: string; // e.g. "Rebuild"
@@ -48,10 +49,11 @@ export const BLOCK_TEXT_COLOR: Record<string, string> = {
 export default function WeeksPage() {
   const [completedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
   const reduceMotion = useReducedMotion();
+  const entered = useEntranceOnce('weeks');
   const blocks = groupByBlock();
 
   const rise = (delay: number) => ({
-    initial: reduceMotion ? false : ({ opacity: 0, y: 16 } as const),
+    initial: reduceMotion || !entered ? false : ({ opacity: 0, y: 16 } as const),
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.4, delay, ease: 'easeOut' as const },
   });
@@ -61,9 +63,7 @@ export default function WeeksPage() {
       <main className="max-w-xl mx-auto px-5 pt-10 pb-16">
         {/* Hero */}
         <motion.header className="mb-10" {...rise(0)}>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-mist mb-3">
-            Volleyball Strength
-          </p>
+          <p className="text-sm font-bold text-mist mb-3">Volleyball Strength</p>
           <h1 className="text-[2.75rem] leading-[0.95] font-bold tracking-[-0.03em]">
             12-week
             <br />

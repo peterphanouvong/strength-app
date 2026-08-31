@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Check, Timer, Plus, X } from 'lucide-react';
+import { ChevronLeft, Check, Timer, Plus, X, History } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { TRAINING_PLAN, WorkoutDay, Exercise } from '../data';
 import { cn } from '../lib/utils';
@@ -24,6 +24,8 @@ import {
   requestNotifications,
   notifyRestOver,
 } from '../lib/feedback';
+import { ActiveSession, getActiveSession, startSession, endSession } from '../lib/session';
+import { useEntranceOnce } from '../lib/animation';
 
 const REST_OVERRIDES_KEY = 'vb-rest-overrides-v1';
 const REST_OPTIONS = [0, 30, 60, 90, 120, 150, 180, 240, 300];
@@ -38,24 +40,33 @@ const SET_TYPES: { type: SetType | undefined; letter: string; label: string; hin
 const SET_TYPE_COLOR: Record<SetType, string> = { W: 'text-zest', F: 'text-flame', D: 'text-mist' };
 
 function useSessionTimer(dayId: string | undefined) {
-  const key = `vb-session-start-${dayId}`;
   const [elapsed, setElapsed] = useState(0);
+  // Another day's session already running → the user must resolve it first.
+  const [conflict, setConflict] = useState<ActiveSession | null>(() => {
+    if (!dayId) return null;
+    const s = getActiveSession();
+    return s && s.dayId !== dayId ? s : null;
+  });
 
   useEffect(() => {
-    if (!dayId) return;
-    let start = Number(window.localStorage.getItem(key));
-    if (!start) {
-      start = Date.now();
-      window.localStorage.setItem(key, String(start));
+    if (!dayId || conflict) return;
+    let session = getActiveSession();
+    if (!session || session.dayId !== dayId) {
+      session = startSession(dayId);
     }
-    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    const startedAt = session.startedAt;
+    const tick = () => setElapsed(Math.floor((Date.now() - startedAt) / 1000));
     tick();
     const interval = window.setInterval(tick, 1000);
     return () => window.clearInterval(interval);
-  }, [dayId, key]);
+  }, [dayId, conflict]);
 
-  const clear = () => window.localStorage.removeItem(key);
-  return { elapsed, clear };
+  const takeOver = () => {
+    if (dayId) startSession(dayId);
+    setConflict(null);
+  };
+
+  return { elapsed, clear: endSession, conflict, takeOver };
 }
 
 export function formatElapsed(seconds: number): string {
@@ -75,14 +86,16 @@ export default function WorkoutPage() {
   const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
 
+  const entered = useEntranceOnce('workout');
   const [completedSets, setCompletedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
   const [restOverrides, setRestOverrides] = useLocalStorage<Record<string, number>>(REST_OVERRIDES_KEY, {});
-  const { elapsed, clear } = useSessionTimer(id);
+  const { elapsed, clear, conflict, takeOver } = useSessionTimer(id);
 
   const [rest, setRest] = useState<RestState | null>(null);
   const [restRemaining, setRestRemaining] = useState(0);
   const [setTypeTarget, setSetTypeTarget] = useState<{ exercise: Exercise; setIndex: number } | null>(null);
   const [restTarget, setRestTarget] = useState<Exercise | null>(null);
+  const [historyTarget, setHistoryTarget] = useState<Exercise | null>(null);
   const [justCompleted, setJustCompleted] = useState<string | null>(null);
   const [notifPerm, setNotifPerm] = useState(notificationPermission());
 
@@ -275,7 +288,7 @@ export default function WorkoutPage() {
         {/* Session stats */}
         <motion.div
           className="grid grid-cols-3 gap-3 mb-8"
-          initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+          initial={reduceMotion || !entered ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
         >
@@ -288,7 +301,7 @@ export default function WorkoutPage() {
           {day.exercises.map((exercise, index) => (
             <motion.section
               key={exercise.id}
-              initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+              initial={reduceMotion || !entered ? false : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: Math.min(index * 0.07, 0.35), ease: 'easeOut' }}
             >
@@ -304,6 +317,7 @@ export default function WorkoutPage() {
                 getPreviousSetLog={getPreviousSetLog}
                 onPickSetType={(setIndex) => setSetTypeTarget({ exercise, setIndex })}
                 onConfigureRest={() => setRestTarget(exercise)}
+                onShowHistory={() => setHistoryTarget(exercise)}
               />
             </motion.section>
           ))}
@@ -452,9 +466,198 @@ export default function WorkoutPage() {
           </div>
         )}
       </BottomSheet>
+
+      {/* Exercise history sheet */}
+      <BottomSheet
+        open={historyTarget !== null}
+        onClose={() => setHistoryTarget(null)}
+        title={historyTarget?.name ?? 'History'}
+      >
+        {historyTarget && <ExerciseHistory exercise={historyTarget} completedSets={completedSets} />}
+      </BottomSheet>
+
+      {/* Another workout in progress */}
+      <BottomSheet
+        open={conflict !== null}
+        onClose={() => navigate(`/week/${weekNum}`)}
+        title="Workout in progress"
+      >
+        {conflict && (
+          <ConflictContent
+            conflict={conflict}
+            onResume={() => {
+              hapticTap();
+              navigate(`/workout/${conflict.dayId}`);
+            }}
+            onTakeOver={() => {
+              hapticSelect();
+              takeOver();
+            }}
+          />
+        )}
+      </BottomSheet>
     </div>
   );
 }
+
+const ConflictContent: React.FC<{
+  conflict: ActiveSession;
+  onResume: () => void;
+  onTakeOver: () => void;
+}> = ({ conflict, onResume, onTakeOver }) => {
+  let title = 'Another workout';
+  for (const week of TRAINING_PLAN) {
+    const found = week.days.find((d) => d.id === conflict.dayId);
+    if (found) {
+      title = found.title.split(': ')[1] || found.title;
+      break;
+    }
+  }
+  const mins = Math.max(1, Math.round((Date.now() - conflict.startedAt) / 60000));
+
+  return (
+    <div>
+      <p className="text-sm text-mist leading-relaxed mb-5">
+        <span className="font-bold text-white">{title}</span> has been running for {mins} min. Finish
+        or end it before starting this one.
+      </p>
+      <button
+        onClick={onResume}
+        className="w-full bg-mint text-court-deep font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
+      >
+        Go back to that workout
+      </button>
+      <button
+        onClick={onTakeOver}
+        className="w-full bg-white/10 hover:bg-white/20 font-bold text-sm py-3.5 rounded-xl mt-2 transition-colors"
+      >
+        End it and start this one
+      </button>
+    </div>
+  );
+};
+
+/** Hevy-style per-exercise history: mini progression chart + logged sets by week. */
+const ExerciseHistory: React.FC<{ exercise: Exercise; completedSets: ProgressMap }> = ({
+  exercise,
+  completedSets,
+}) => {
+  type Entry = {
+    weekNumber: number;
+    prescription: string;
+    sets: { label: string; setType?: SetType }[];
+    topWeight: number;
+  };
+
+  const entries: Entry[] = [];
+  for (const week of TRAINING_PLAN) {
+    for (const d of week.days) {
+      const e = d.exercises.find((x) => x.name === exercise.name);
+      if (!e) continue;
+      const sets: Entry['sets'] = [];
+      let topWeight = 0;
+      for (let i = 0; i < e.sets; i++) {
+        const log = completedSets[`${e.id}-${i}`];
+        if (!log?.completed) continue;
+        let label: string;
+        if (e.tracking === 'weighted') {
+          const reps = log.actualReps || e.reps;
+          label = `${log.weight || '–'} kg × ${reps}`;
+          topWeight = Math.max(topWeight, parseFloat(log.weight || '') || 0);
+        } else if (e.tracking === 'time') {
+          label = `${log.timeSec || '–'} s`;
+        } else {
+          label = `${log.actualReps || '–'} reps`;
+        }
+        sets.push({ label, setType: log.setType });
+      }
+      if (sets.length > 0) {
+        entries.push({
+          weekNumber: week.weekNumber,
+          prescription: `${e.sets} × ${e.reps}${e.load ? ` @ ${e.load}` : ''}`,
+          sets,
+          topWeight,
+        });
+      }
+    }
+  }
+
+  if (entries.length === 0) {
+    return (
+      <p className="text-sm text-mist text-center py-6">
+        No sets logged yet — your history with this exercise builds as you train.
+      </p>
+    );
+  }
+
+  const chartPoints = entries.filter((e) => e.topWeight > 0);
+  const recentFirst = [...entries].reverse();
+
+  return (
+    <div className="max-h-[60vh] overflow-y-auto -mx-1 px-1">
+      {exercise.tracking === 'weighted' && chartPoints.length >= 2 && (
+        <TopWeightChart points={chartPoints.map((e) => ({ week: e.weekNumber, weight: e.topWeight }))} />
+      )}
+      <div className="space-y-5">
+        {recentFirst.map((entry) => (
+          <div key={entry.weekNumber}>
+            <div className="flex items-baseline justify-between mb-1.5">
+              <p className="font-bold">Week {entry.weekNumber}</p>
+              <p className="text-xs text-mist">{entry.prescription}</p>
+            </div>
+            <div className="space-y-1">
+              {entry.sets.map((s, i) => (
+                <div key={i} className="flex items-center gap-3 bg-white/5 rounded-lg px-3 py-2">
+                  <span
+                    className={cn(
+                      'w-5 text-center text-xs font-bold',
+                      s.setType ? SET_TYPE_COLOR[s.setType] : 'text-mist'
+                    )}
+                  >
+                    {s.setType ?? i + 1}
+                  </span>
+                  <span className="text-sm font-bold tabular-nums">{s.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/** Small SVG line chart of the heaviest completed set per week. */
+const TopWeightChart: React.FC<{ points: { week: number; weight: number }[] }> = ({ points }) => {
+  const W = 320;
+  const H = 96;
+  const PAD = 12;
+  const min = Math.min(...points.map((p) => p.weight));
+  const max = Math.max(...points.map((p) => p.weight));
+  const range = max - min || 1;
+  const x = (i: number) => PAD + (i / (points.length - 1)) * (W - PAD * 2);
+  const y = (w: number) => H - PAD - ((w - min) / range) * (H - PAD * 2);
+  const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(p.weight)}`).join(' ');
+  const last = points[points.length - 1];
+
+  return (
+    <div className="bg-white/5 rounded-2xl px-4 pt-3 pb-1 mb-5">
+      <p className="text-xs text-mist font-medium">
+        Heaviest set · <span className="text-mint font-bold">{last.weight} kg</span> in week {last.week}
+      </p>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+        <path d={path} fill="none" stroke="#7bf1a8" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+        {points.map((p, i) => (
+          <circle key={i} cx={x(i)} cy={y(p.weight)} r={4} fill="#7bf1a8" />
+        ))}
+      </svg>
+      <div className="flex justify-between text-[0.625rem] font-bold text-mist -mt-1 pb-1">
+        <span>Wk {points[0].week}</span>
+        <span>Wk {last.week}</span>
+      </div>
+    </div>
+  );
+};
 
 const Stat: React.FC<{ label: string; value: string; accent?: string; pop?: boolean }> = ({
   label,
@@ -463,7 +666,7 @@ const Stat: React.FC<{ label: string; value: string; accent?: string; pop?: bool
   pop,
 }) => (
   <div className="bg-white/10 rounded-2xl px-3 py-3">
-    <p className="text-[0.625rem] font-bold uppercase tracking-[0.15em] text-mist">{label}</p>
+    <p className="text-[0.6875rem] font-bold text-mist">{label}</p>
     {pop ? (
       <motion.p
         key={value}
@@ -492,6 +695,7 @@ const ExerciseSection: React.FC<{
   getPreviousSetLog: (exerciseName: string, currentWeekNum: number, setIndex: number) => SetLog | null;
   onPickSetType: (setIndex: number) => void;
   onConfigureRest: () => void;
+  onShowHistory: () => void;
 }> = ({
   exercise,
   index,
@@ -504,6 +708,7 @@ const ExerciseSection: React.FC<{
   getPreviousSetLog,
   onPickSetType,
   onConfigureRest,
+  onShowHistory,
 }) => {
   const tracking = exercise.tracking;
 
@@ -518,9 +723,18 @@ const ExerciseSection: React.FC<{
     <div>
       {/* Exercise header */}
       <div className="flex items-start justify-between gap-3 mb-1">
-        <h2 className="text-xl font-bold tracking-[-0.02em] leading-snug">
-          {index + 1}. {exercise.name}
-        </h2>
+        <button
+          onClick={() => {
+            hapticTap();
+            onShowHistory();
+          }}
+          className="flex items-center gap-2 text-left min-w-0 group"
+        >
+          <h2 className="text-xl font-bold tracking-[-0.02em] leading-snug">
+            {index + 1}. {exercise.name}
+          </h2>
+          <History className="w-4 h-4 text-mist flex-shrink-0 group-hover:text-white transition-colors" />
+        </button>
         <span className="flex-shrink-0 bg-white text-court text-xs font-bold px-2.5 py-1 rounded-md whitespace-nowrap mt-0.5">
           {exercise.sets} × {exercise.reps}
         </span>
@@ -541,7 +755,7 @@ const ExerciseSection: React.FC<{
       </button>
 
       {/* Table header */}
-      <div className="grid grid-cols-12 gap-2 mt-3 mb-2 px-1 text-[0.625rem] font-bold text-mist uppercase tracking-[0.12em] text-center">
+      <div className="grid grid-cols-12 gap-2 mt-3 mb-2 px-1 text-[0.625rem] font-bold text-mist uppercase text-center">
         <div className="col-span-1">Set</div>
         <div className={cn('text-left', tracking === 'weighted' ? 'col-span-3' : 'col-span-4')}>Previous</div>
         {tracking === 'weighted' && <div className="col-span-3">kg</div>}
@@ -605,7 +819,7 @@ const ExerciseSection: React.FC<{
                     <input
                       type="number"
                       inputMode="decimal"
-                      placeholder="—"
+                      placeholder={prevLog?.weight || '—'}
                       value={log.weight || ''}
                       onChange={(e) => updateSetLog(exercise.id, setIndex, 'weight', e.target.value)}
                       disabled={log.completed}
@@ -616,7 +830,7 @@ const ExerciseSection: React.FC<{
                     <input
                       type="number"
                       inputMode="numeric"
-                      placeholder={exercise.reps.replace(/[^0-9-]/g, '') || '—'}
+                      placeholder={prevLog?.actualReps || exercise.reps.replace(/[^0-9-]/g, '') || '—'}
                       value={log.actualReps || ''}
                       onChange={(e) => updateSetLog(exercise.id, setIndex, 'actualReps', e.target.value)}
                       disabled={log.completed}
@@ -631,7 +845,7 @@ const ExerciseSection: React.FC<{
                   <input
                     type="number"
                     inputMode="numeric"
-                    placeholder={exercise.reps.replace(/[^0-9-]/g, '') || '—'}
+                    placeholder={prevLog?.actualReps || exercise.reps.replace(/[^0-9-]/g, '') || '—'}
                     value={log.actualReps || ''}
                     onChange={(e) => updateSetLog(exercise.id, setIndex, 'actualReps', e.target.value)}
                     disabled={log.completed}
@@ -645,7 +859,7 @@ const ExerciseSection: React.FC<{
                   <input
                     type="number"
                     inputMode="decimal"
-                    placeholder="—"
+                    placeholder={prevLog?.timeSec || '—'}
                     value={log.timeSec || ''}
                     onChange={(e) => updateSetLog(exercise.id, setIndex, 'timeSec', e.target.value)}
                     disabled={log.completed}

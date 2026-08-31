@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
+import { Share } from 'lucide-react';
 import { TRAINING_PLAN } from '../data';
 import { formatElapsed } from './WorkoutPage';
-import { hapticTap } from '../lib/feedback';
+import { hapticTap, hapticSelect } from '../lib/feedback';
+import { shareWorkout } from '../lib/share';
 
 type CompletionState = {
   elapsed: number;
@@ -67,6 +69,25 @@ export default function CompletionPage() {
   }
 
   const dayName = dayTitle ? dayTitle.split(': ')[1] || dayTitle : 'Workout';
+  const [shareState, setShareState] = useState<'idle' | 'busy' | 'saved'>('idle');
+
+  const handleShare = async () => {
+    if (!state || shareState === 'busy') return;
+    hapticSelect();
+    setShareState('busy');
+    try {
+      const result = await shareWorkout({
+        dayName,
+        weekNum: weekNum ?? 1,
+        duration: formatElapsed(state.elapsed),
+        volume: `${Math.round(state.volume).toLocaleString()} kg`,
+        sets: `${state.setsDone}/${state.totalSets}`,
+      });
+      setShareState(result === 'downloaded' ? 'saved' : 'idle');
+    } catch {
+      setShareState('idle');
+    }
+  };
 
   const rise = (delay: number) => ({
     initial: reduceMotion ? false : { opacity: 0, y: 18 },
@@ -79,10 +100,7 @@ export default function CompletionPage() {
       {!reduceMotion && <Confetti />}
 
       <main className="max-w-xl mx-auto w-full px-5 flex-1 flex flex-col justify-center py-12">
-        <motion.p
-          className="text-xs font-bold uppercase tracking-[0.2em] text-mist mb-3"
-          {...rise(0.05)}
-        >
+        <motion.p className="text-sm font-bold text-mist mb-3" {...rise(0.05)}>
           Week {weekNum} · {dayName}
         </motion.p>
 
@@ -103,20 +121,20 @@ export default function CompletionPage() {
         >
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <p className="text-[0.625rem] font-bold uppercase tracking-[0.15em] opacity-70">Duration</p>
+              <p className="text-[0.6875rem] font-bold opacity-70">Duration</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.02em] mt-1">
                 {state ? formatElapsed(state.elapsed) : '—'}
               </p>
             </div>
             <div>
-              <p className="text-[0.625rem] font-bold uppercase tracking-[0.15em] opacity-70">Volume</p>
+              <p className="text-[0.6875rem] font-bold opacity-70">Volume</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.02em] mt-1">
                 {state ? `${Math.round(state.volume).toLocaleString()}` : '—'}
                 <span className="text-sm font-bold ml-0.5">kg</span>
               </p>
             </div>
             <div>
-              <p className="text-[0.625rem] font-bold uppercase tracking-[0.15em] opacity-70">Sets</p>
+              <p className="text-[0.6875rem] font-bold opacity-70">Sets</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.02em] mt-1">
                 {state ? `${state.setsDone}/${state.totalSets}` : '—'}
               </p>
@@ -124,13 +142,24 @@ export default function CompletionPage() {
           </div>
         </motion.div>
 
+        {state && (
+          <motion.button
+            onClick={handleShare}
+            className="mt-8 w-full bg-mint text-court-deep font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98] flex items-center justify-center gap-2"
+            {...rise(0.35)}
+          >
+            <Share className="w-5 h-5" />
+            {shareState === 'busy' ? 'Preparing…' : shareState === 'saved' ? 'Image saved' : 'Share'}
+          </motion.button>
+        )}
+
         <motion.button
           onClick={() => {
             hapticTap();
             navigate(`/week/${weekNum ?? 1}`);
           }}
-          className="mt-8 w-full bg-white text-court font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
-          {...rise(0.4)}
+          className="mt-3 w-full bg-white text-court font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
+          {...rise(0.42)}
         >
           Done
         </motion.button>

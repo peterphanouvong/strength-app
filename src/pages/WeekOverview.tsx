@@ -8,6 +8,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 import { PROGRESS_KEY, ProgressMap, getDayProgress } from '../lib/progress';
 import { BLOCK_TEXT_COLOR } from './WeeksPage';
 import { hapticTap, hapticSelect } from '../lib/feedback';
+import { useEntranceOnce } from '../lib/animation';
 
 // Poster panel palettes, cycled per day
 const POSTERS = [
@@ -57,7 +58,7 @@ export default function WeekOverview() {
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-mist">
+          <span className="text-sm font-bold text-mist">
             Block {week.block.charAt(0)} · {blockName}
           </span>
         </div>
@@ -163,6 +164,7 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
   completedSets,
 }) => {
   const reduceMotion = useReducedMotion();
+  const entered = useEntranceOnce('week-days');
   const progress = getDayProgress(day, completedSets);
   const done = progress.total > 0 && progress.percentage === 100;
   const started = progress.completed > 0 && !done;
@@ -171,7 +173,7 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
 
   return (
     <motion.div
-      initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+      initial={reduceMotion || !entered ? false : { opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.1 + index * 0.07, ease: 'easeOut' }}
     >
@@ -200,9 +202,7 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
       {/* Content */}
       <div className="flex-1 min-w-0 p-4">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[0.625rem] font-bold uppercase tracking-[0.18em] text-mist">
-            {letter}
-          </p>
+          <p className="text-[0.6875rem] font-bold text-mist">{letter}</p>
           {done ? (
             <span className="w-6 h-6 rounded-full bg-mint text-court-deep flex items-center justify-center flex-shrink-0">
               <Check className="w-3.5 h-3.5" strokeWidth={3} />
