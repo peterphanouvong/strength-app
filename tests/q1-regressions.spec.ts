@@ -213,6 +213,43 @@ test.describe('Q1 — second tab does not clobber first tab’s logged sets', ()
   });
 });
 
+// Q1 — reps placeholders must not mangle non-numeric prescriptions. Pre-fix,
+// `exercise.reps.replace(/[^0-9-]/g, '')` kept hyphens and concatenated every
+// digit, so 'Max-2' (w1-d4 Pull-Ups) rendered a '-2' placeholder and
+// '8 / 30 s' (w5-d1 Ab Wheel or Hollow Hold) rendered '830'.
+
+test.describe('Q1 — reps placeholder does not mangle non-numeric prescriptions', () => {
+  const exerciseSection = (p: Page, name: string) =>
+    p.locator('main section').filter({ has: p.getByRole('heading', { name: new RegExp(name) }) });
+
+  test("w1-d4 Pull-Ups ('Max-2') placeholder is '—', never '-2'", async ({ page }) => {
+    await page.goto('/workout/w1-d4');
+    const inputs = exerciseSection(page, 'Pull-Ups').locator('input[inputmode="numeric"]');
+    await expect(inputs.first()).toBeVisible();
+    for (const input of await inputs.all()) {
+      await expect(input).toHaveAttribute('placeholder', '—');
+    }
+  });
+
+  test("w5-d1 Ab Wheel ('8 / 30 s') placeholder is '8', never '830'", async ({ page }) => {
+    await page.goto('/workout/w5-d1');
+    const inputs = exerciseSection(page, 'Ab Wheel or Hollow Hold').locator('input[inputmode="numeric"]');
+    await expect(inputs.first()).toBeVisible();
+    for (const input of await inputs.all()) {
+      await expect(input).toHaveAttribute('placeholder', '8');
+    }
+  });
+
+  test("w1-d2 Pull-Ups ('6-8') range placeholder still reads '6-8'", async ({ page }) => {
+    await page.goto('/workout/w1-d2');
+    const inputs = exerciseSection(page, 'Pull-Ups').locator('input[inputmode="numeric"]');
+    await expect(inputs.first()).toBeVisible();
+    for (const input of await inputs.all()) {
+      await expect(input).toHaveAttribute('placeholder', '6-8');
+    }
+  });
+});
+
 // Q1 — TopWeightChart callout must name the actual heaviest set, not the most
 // recent week's top weight. Pre-fix it rendered points[points.length - 1] (the
 // latest chronological point) under the "Heaviest set" label, so a lighter

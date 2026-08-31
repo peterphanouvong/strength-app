@@ -26,6 +26,15 @@ import { ActiveSession, getActiveSession, startSession, endSession } from '../li
 import { useEntranceOnce } from '../lib/animation';
 
 const REST_OVERRIDES_KEY = 'vb-rest-overrides-v1';
+
+/**
+ * Numeric placeholder hint from a reps prescription. Only a leading number (or
+ * range) counts: '6' → '6', '6-8' → '6-8', '8/leg' → '8', '8 / 30 s' → '8'.
+ * Non-numeric prescriptions ('Max-2') yield undefined — never '-2' or '830'.
+ */
+function repsPlaceholder(reps: string): string | undefined {
+  return reps.trim().match(/^\d+(?:-\d+)?/)?.[0];
+}
 const REST_OPTIONS = [0, 30, 60, 90, 120, 150, 180, 240, 300];
 
 const SET_TYPES: { type: SetType | undefined; letter: string; label: string; hint: string; color: string }[] = [
@@ -844,7 +853,7 @@ const ExerciseSection: React.FC<{
                     <input
                       type="number"
                       inputMode="numeric"
-                      placeholder={prevLog?.actualReps || exercise.reps.replace(/[^0-9-]/g, '') || '—'}
+                      placeholder={prevLog?.actualReps || repsPlaceholder(exercise.reps) || '—'}
                       value={log.actualReps || ''}
                       onChange={(e) => updateSetLog(exercise.id, setIndex, 'actualReps', e.target.value)}
                       disabled={log.completed}
@@ -859,7 +868,7 @@ const ExerciseSection: React.FC<{
                   <input
                     type="number"
                     inputMode="numeric"
-                    placeholder={prevLog?.actualReps || exercise.reps.replace(/[^0-9-]/g, '') || '—'}
+                    placeholder={prevLog?.actualReps || repsPlaceholder(exercise.reps) || '—'}
                     value={log.actualReps || ''}
                     onChange={(e) => updateSetLog(exercise.id, setIndex, 'actualReps', e.target.value)}
                     disabled={log.completed}
