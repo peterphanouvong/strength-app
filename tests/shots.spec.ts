@@ -37,7 +37,13 @@ test.describe('shots', () => {
   });
 
   test('V4 completion', async ({ page }) => {
-    await seedStorage(page, { progress: canonicalW1D1() });
+    // Seed an aged session so the completion screen shows a real duration, matching
+    // how the app behaves for a genuine workout (the flow reads elapsed from the
+    // session's startedAt). Without this the stat card headlines a misleading 0:00.
+    await seedStorage(page, {
+      progress: canonicalW1D1(),
+      session: { dayId: 'w1-d1', startedAt: Date.now() - 47 * 60_000 },
+    });
     await page.goto('/workout/w1-d1');
     await settle(page);
     await page.getByRole('button', { name: 'Finish' }).click();
