@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { readStorage, seedStorage, SESSION_KEY } from './helpers/fixtures';
+import { readStorage, seedStorage, PROGRESS_KEY, SESSION_KEY, type SetLog } from './helpers/fixtures';
 
 // Q1 — invalid /workout/:id must not start a phantom session (docs/gauntlet/ANSWER_KEY.md Q1).
 // Pre-fix, useSessionTimer ran before the !day guard and wrote vb-active-session-v1
@@ -71,5 +71,54 @@ test.describe('Q1 — closing bottom sheet is not clickable mid-exit', () => {
     // The takeover stuck: the session belongs to w1-d2.
     const session = await readStorage<Session>(page, SESSION_KEY);
     expect(session?.dayId).toBe('w1-d2');
+  });
+});
+
+// Q1 — multi-tab clobber: useLocalStorage must not rewrite the whole progress map
+// from the stale in-memory snapshot captured at mount. Pre-fix, a second tab's
+// first tick ran its functional updater against the empty map it mounted with and
+// setItem()'d the result, erasing every set the first tab had already logged.
+
+test.describe('Q1 — second tab does not clobber first tab’s logged sets', () => {
+  test('tab B ticking Back Squat set 1 keeps tab A’s Hang Power Clean set 1 (weight included) in storage and after reload', async ({
+    page,
+    context,
+  }) => {
+    const exerciseSection = (p: Page, name: string) =>
+      p.locator('main section').filter({ has: p.getByRole('heading', { name: new RegExp(name) }) });
+
+    // Both tabs open on the same workout before either writes anything.
+    const tabA = page;
+    await tabA.goto('/workout/w1-d1');
+    await expect(tabA.getByRole('heading', { name: /Hang Power Clean/ })).toBeVisible();
+
+    const tabB = await context.newPage();
+    await tabB.goto('/workout/w1-d1');
+    await expect(tabB.getByRole('heading', { name: /Hang Power Clean/ })).toBeVisible();
+
+    // Tab A: 60 kg on Hang Power Clean set 1, then tick it.
+    const hpcA = exerciseSection(tabA, 'Hang Power Clean');
+    await hpcA.locator('input[inputmode="decimal"]').first().fill('60');
+    await hpcA.getByRole('button', { name: 'Mark set complete' }).first().click();
+    await expect
+      .poll(async () => (await readStorage<Record<string, SetLog>>(tabA, PROGRESS_KEY))?.['w1-d1-e1-0']?.completed)
+      .toBe(true);
+
+    // Tab B (mounted before tab A's write): tick Back Squat set 1.
+    await exerciseSection(tabB, 'Back Squat').getByRole('button', { name: 'Mark set complete' }).first().click();
+    await expect
+      .poll(async () => (await readStorage<Record<string, SetLog>>(tabB, PROGRESS_KEY))?.['w1-d1-e2-0']?.completed)
+      .toBe(true);
+
+    // Tab A's entry survived tab B's write.
+    const progress = await readStorage<Record<string, SetLog>>(tabB, PROGRESS_KEY);
+    expect(progress?.['w1-d1-e1-0']).toMatchObject({ completed: true, weight: '60' });
+    expect(progress?.['w1-d1-e2-0']).toMatchObject({ completed: true });
+
+    // And tab A still shows it after a reload: set 1 ticked, weight intact.
+    await tabA.reload();
+    const hpcAfter = exerciseSection(tabA, 'Hang Power Clean');
+    await expect(hpcAfter.getByRole('button', { name: 'Mark set incomplete' })).toHaveCount(1);
+    await expect(hpcAfter.locator('input[inputmode="decimal"]').first()).toHaveValue('60');
   });
 });
