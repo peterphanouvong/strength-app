@@ -6,6 +6,7 @@ import { TRAINING_PLAN, WeekPlan } from '../data';
 import { cn } from '../lib/utils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { PROGRESS_KEY, ProgressMap, getWeekProgress } from '../lib/progress';
+import { hapticSelect } from '../lib/feedback';
 
 type BlockGroup = {
   name: string; // e.g. "Rebuild"
@@ -113,6 +114,7 @@ const WeekRow: React.FC<{ week: WeekPlan; completedSets: ProgressMap }> = ({ wee
   return (
     <Link
       to={`/week/${week.weekNumber}`}
+      onClick={hapticSelect}
       className="block bg-white/10 rounded-2xl px-5 py-4 transition-transform active:scale-[0.98] hover:bg-white/15"
     >
       <div className="flex items-center justify-between gap-3">

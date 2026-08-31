@@ -7,6 +7,7 @@ import { cn } from '../lib/utils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { PROGRESS_KEY, ProgressMap, getDayProgress } from '../lib/progress';
 import { BLOCK_TEXT_COLOR } from './WeeksPage';
+import { hapticTap, hapticSelect } from '../lib/feedback';
 
 // Poster panel palettes, cycled per day
 const POSTERS = [
@@ -47,7 +48,10 @@ export default function WeekOverview() {
         {/* Top bar */}
         <div className="flex items-center justify-between mb-8">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => {
+              hapticTap();
+              navigate('/');
+            }}
             aria-label="Back to programme"
             className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
           >
@@ -108,7 +112,10 @@ const WeekInfoTabs: React.FC<{ week: (typeof TRAINING_PLAN)[number] }> = ({ week
         {INFO_TABS.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActive(tab.id)}
+            onClick={() => {
+              hapticTap();
+              setActive(tab.id);
+            }}
             className={cn(
               'px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors',
               active === tab.id ? 'bg-white text-court' : 'bg-white/10 text-mist hover:bg-white/20'
@@ -170,6 +177,7 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
     >
     <Link
       to={`/workout/${day.id}`}
+      onClick={hapticSelect}
       className="flex bg-white/10 rounded-2xl overflow-hidden transition-transform active:scale-[0.98] hover:bg-white/15"
     >
       {/* Poster panel */}

@@ -17,6 +17,8 @@ import {
   hapticExerciseDone,
   hapticWorkoutDone,
   hapticRestOver,
+  hapticTap,
+  hapticSelect,
   notificationsSupported,
   notificationPermission,
   requestNotifications,
@@ -134,6 +136,7 @@ export default function WorkoutPage() {
   const finishWorkout = () => {
     clear();
     if (progress.completed === 0) {
+      hapticTap();
       navigate(`/week/${weekNum}`);
       return;
     }
@@ -235,7 +238,10 @@ export default function WorkoutPage() {
       <header className="bg-court/90 backdrop-blur-md border-b border-white/10 sticky top-0 z-20">
         <div className="max-w-xl mx-auto px-5 py-3 flex items-center gap-3">
           <button
-            onClick={() => navigate(`/week/${weekNum}`)}
+            onClick={() => {
+              hapticTap();
+              navigate(`/week/${weekNum}`);
+            }}
             aria-label="Back to week"
             className="w-10 h-10 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
           >
@@ -322,13 +328,19 @@ export default function WorkoutPage() {
                   <p className="text-xl font-bold tabular-nums leading-tight">{formatElapsed(restRemaining)}</p>
                 </div>
                 <button
-                  onClick={() => setRest((r) => (r ? { ...r, endsAt: r.endsAt + 15000, total: r.total + 15 } : r))}
+                  onClick={() => {
+                    hapticTap();
+                    setRest((r) => (r ? { ...r, endsAt: r.endsAt + 15000, total: r.total + 15 } : r));
+                  }}
                   className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-xs font-bold px-3 py-2 rounded-full transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" /> 15s
                 </button>
                 <button
-                  onClick={() => setRest(null)}
+                  onClick={() => {
+                    hapticTap();
+                    setRest(null);
+                  }}
                   aria-label="Skip rest"
                   className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
                 >
@@ -361,9 +373,10 @@ export default function WorkoutPage() {
             return (
               <button
                 key={option.label}
-                onClick={() =>
-                  setTypeTarget && setSetType(setTypeTarget.exercise.id, setTypeTarget.setIndex, option.type)
-                }
+                onClick={() => {
+                  hapticSelect();
+                  if (setTypeTarget) setSetType(setTypeTarget.exercise.id, setTypeTarget.setIndex, option.type);
+                }}
                 className={cn(
                   'w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-left transition-colors',
                   selected ? 'bg-white/15' : 'hover:bg-white/10'
@@ -394,6 +407,7 @@ export default function WorkoutPage() {
               <button
                 key={seconds}
                 onClick={() => {
+                  hapticSelect();
                   if (restTarget) {
                     setRestOverrides((prev) => ({ ...prev, [restTarget.name]: seconds }));
                     setRestTarget(null);
@@ -426,7 +440,10 @@ export default function WorkoutPage() {
               </p>
             ) : (
               <button
-                onClick={async () => setNotifPerm(await requestNotifications())}
+                onClick={async () => {
+                  hapticTap();
+                  setNotifPerm(await requestNotifications());
+                }}
                 className="w-full bg-white/10 hover:bg-white/20 font-bold text-sm py-3 rounded-xl transition-colors"
               >
                 Notify me when rest ends
@@ -513,7 +530,10 @@ const ExerciseSection: React.FC<{
 
       {/* Rest timer config */}
       <button
-        onClick={onConfigureRest}
+        onClick={() => {
+          hapticTap();
+          onConfigureRest();
+        }}
         className="flex items-center gap-1.5 text-sm font-bold text-mint py-1.5 -ml-0.5 hover:opacity-80 transition-opacity"
       >
         <Timer className="w-4 h-4" />
@@ -556,7 +576,10 @@ const ExerciseSection: React.FC<{
               )}
             >
               <button
-                onClick={() => onPickSetType(setIndex)}
+                onClick={() => {
+                  hapticTap();
+                  onPickSetType(setIndex);
+                }}
                 aria-label="Change set type"
                 className={cn(
                   'col-span-1 text-center font-bold tabular-nums py-1 rounded-md hover:bg-white/10 transition-colors',

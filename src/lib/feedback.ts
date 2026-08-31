@@ -19,6 +19,8 @@ export function haptic(input: HapticInput) {
   }
 }
 
+export const hapticTap = () => haptic(15); // generic button press
+export const hapticSelect = () => haptic(30); // choosing something / starting something
 export const hapticSetDone = () => haptic(40);
 export const hapticSetUndone = () => haptic(15);
 export const hapticExerciseDone = () => haptic('success');

@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { TRAINING_PLAN } from '../data';
 import { formatElapsed } from './WorkoutPage';
+import { hapticTap } from '../lib/feedback';
 
 type CompletionState = {
   elapsed: number;
@@ -124,7 +125,10 @@ export default function CompletionPage() {
         </motion.div>
 
         <motion.button
-          onClick={() => navigate(`/week/${weekNum ?? 1}`)}
+          onClick={() => {
+            hapticTap();
+            navigate(`/week/${weekNum ?? 1}`);
+          }}
           className="mt-8 w-full bg-white text-court font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
           {...rise(0.4)}
         >
@@ -132,7 +136,10 @@ export default function CompletionPage() {
         </motion.button>
 
         <motion.button
-          onClick={() => navigate('/')}
+          onClick={() => {
+            hapticTap();
+            navigate('/');
+          }}
           className="mt-3 w-full text-mist font-bold text-sm py-2"
           {...rise(0.5)}
         >
