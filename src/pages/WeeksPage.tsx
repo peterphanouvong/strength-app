@@ -41,7 +41,7 @@ const BLOCK_TAGLINES: Record<string, string> = {
 };
 
 export const BLOCK_TEXT_COLOR: Record<string, string> = {
-  Rebuild: 'text-flame',
+  Rebuild: 'text-white',
   Load: 'text-zest',
   Convert: 'text-mint',
 };
@@ -125,7 +125,7 @@ const WeekRow: React.FC<{ week: WeekPlan; completedSets: ProgressMap }> = ({ wee
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h3 className="text-lg font-bold tracking-[-0.02em]">Week {week.weekNumber}</h3>
-          <p className="text-xs leading-snug text-mist line-clamp-2 mt-1">{week.focus}</p>
+          <p className="text-xs leading-snug text-white/80 line-clamp-2 mt-1">{week.focus}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {done ? (
