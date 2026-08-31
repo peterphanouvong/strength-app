@@ -272,10 +272,10 @@ export default function WorkoutPage() {
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="min-w-0 flex-1">
-            <h1 className="font-bold tracking-[-0.02em] leading-tight truncate">
+            <h1 className="text-lg font-bold tracking-[-0.02em] leading-tight truncate">
               {day.title.split(': ')[1] || day.title}
             </h1>
-            <p className="text-[0.6875rem] font-medium text-mist">
+            <p className="text-[0.6875rem] font-bold text-mist">
               Week {weekNum} · Day {day.title.split(':')[0].replace('Day ', '')}
             </p>
           </div>
@@ -287,7 +287,7 @@ export default function WorkoutPage() {
           </button>
         </div>
         {/* header progress bar */}
-        <div className="h-1 bg-court-deep">
+        <div className="h-1.5 bg-court-deep">
           <div
             className="h-full bg-mint transition-all duration-500"
             style={{ width: `${progress.percentage}%` }}
@@ -676,7 +676,7 @@ const Stat: React.FC<{ label: string; value: string; accent?: string; pop?: bool
   accent,
   pop,
 }) => (
-  <div className="bg-white/10 rounded-2xl px-3 py-3">
+  <div className="bg-white/10 rounded-2xl px-3.5 py-3">
     <p className="text-[0.6875rem] font-bold text-mist">{label}</p>
     {pop ? (
       <motion.p
@@ -684,12 +684,12 @@ const Stat: React.FC<{ label: string; value: string; accent?: string; pop?: bool
         initial={{ scale: 1.25 }}
         animate={{ scale: 1 }}
         transition={{ type: 'spring', stiffness: 500, damping: 22 }}
-        className={cn('text-lg font-bold tabular-nums tracking-[-0.02em] mt-0.5 origin-left', accent)}
+        className={cn('text-xl font-bold tabular-nums tracking-[-0.02em] leading-snug mt-0.5 origin-left', accent)}
       >
         {value}
       </motion.p>
     ) : (
-      <p className={cn('text-lg font-bold tabular-nums tracking-[-0.02em] mt-0.5', accent)}>{value}</p>
+      <p className={cn('text-xl font-bold tabular-nums tracking-[-0.02em] leading-snug mt-0.5', accent)}>{value}</p>
     )}
   </div>
 );
@@ -759,14 +759,14 @@ const ExerciseSection: React.FC<{
           hapticTap();
           onConfigureRest();
         }}
-        className="flex items-center gap-1.5 text-sm font-bold text-mint py-1.5 -ml-0.5 hover:opacity-80 transition-opacity"
+        className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/15 rounded-full pl-2.5 pr-3 py-1.5 mt-1.5 text-[0.8125rem] font-bold text-mint tabular-nums transition-colors"
       >
-        <Timer className="w-4 h-4" />
+        <Timer className="w-3.5 h-3.5" />
         Rest timer: {restSec === 0 ? 'Off' : formatElapsed(restSec)}
       </button>
 
       {/* Table header */}
-      <div className="grid grid-cols-12 gap-2 mt-3 mb-2 px-1 text-[0.625rem] font-bold text-mist uppercase text-center">
+      <div className="grid grid-cols-12 gap-2 mt-3.5 mb-2 px-1 text-[0.625rem] font-bold text-mist uppercase text-center">
         <div className="col-span-1">Set</div>
         <div className={cn('text-left', tracking === 'weighted' ? 'col-span-3' : 'col-span-4')}>Previous</div>
         {tracking === 'weighted' && <div className="col-span-3">kg</div>}
@@ -797,7 +797,7 @@ const ExerciseSection: React.FC<{
               key={setIndex}
               className={cn(
                 'grid grid-cols-12 gap-2 items-center px-1 py-1.5 rounded-xl transition-colors',
-                log.completed && 'bg-mint/20'
+                log.completed && 'bg-mint/20 ring-1 ring-inset ring-mint/25'
               )}
             >
               <button
