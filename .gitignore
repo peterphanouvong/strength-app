@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+node_modules/@playwright
+test-results/
+playwright-report/

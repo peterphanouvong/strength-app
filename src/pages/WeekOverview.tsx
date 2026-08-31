@@ -58,26 +58,26 @@ export default function WeekOverview() {
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="text-sm font-bold text-mist">
+          <span className="text-xs font-bold text-white/70 tabular-nums">
             Block {week.block.charAt(0)} · {blockName}
           </span>
         </div>
 
         {/* Title */}
         <header className="mb-8">
-          <h1 className="text-[2.5rem] leading-none font-bold tracking-[-0.03em] mb-1">
+          <h1 className="text-[3.25rem] leading-[0.95] font-bold tracking-[-0.035em] mb-1.5">
             Week {week.weekNumber}
           </h1>
           <h2
             className={cn(
-              'text-2xl font-bold tracking-[-0.02em] uppercase',
+              'text-2xl leading-none font-bold tracking-[-0.04em] uppercase',
               BLOCK_TEXT_COLOR[blockName]
             )}
           >
             {blockName}
           </h2>
           <WeekInfoTabs week={week} />
-          <div className="border-t border-dashed border-white/30 mt-5" />
+          <div className="border-t border-dashed border-white/25 mt-6" />
         </header>
 
         {/* Day cards */}
@@ -86,10 +86,6 @@ export default function WeekOverview() {
             <DayCard key={day.id} day={day} index={index} completedSets={completedSets} />
           ))}
         </div>
-        <p className="text-center text-[0.6875rem] font-medium text-mist mt-5">
-          Tap a session to start the workout.
-        </p>
-
       </main>
     </div>
   );
@@ -118,7 +114,7 @@ const WeekInfoTabs: React.FC<{ week: (typeof TRAINING_PLAN)[number] }> = ({ week
               setActive(tab.id);
             }}
             className={cn(
-              'px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors',
+              'px-3 py-2 rounded-full text-xs font-bold transition-colors',
               active === tab.id ? 'bg-white text-court' : 'bg-white/10 text-mist hover:bg-white/20'
             )}
           >
@@ -130,7 +126,7 @@ const WeekInfoTabs: React.FC<{ week: (typeof TRAINING_PLAN)[number] }> = ({ week
       <AnimatePresence mode="wait">
         <motion.div
           key={active}
-          className="mt-3 text-sm leading-relaxed"
+          className="mt-3.5 min-h-[2.5rem] text-sm leading-relaxed"
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -4 }}
@@ -185,18 +181,23 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
       {/* Poster panel */}
       <div
         className={cn(
-          'w-28 flex-shrink-0 px-3 py-4 flex flex-col justify-center',
+          'w-[7.5rem] flex-shrink-0 px-3 py-3 flex flex-col justify-between gap-2',
           POSTERS[index % POSTERS.length]
         )}
       >
-        {words.map((word) => (
-          <span
-            key={word}
-            className="block text-[0.9375rem] font-bold uppercase leading-[1.1] tracking-[-0.02em]"
-          >
-            {word}
-          </span>
-        ))}
+        <span className="text-xs font-bold tabular-nums opacity-60">
+          {String(index + 1).padStart(2, '0')}
+        </span>
+        <div>
+          {words.map((word) => (
+            <span
+              key={word}
+              className="block text-[1.125rem] font-bold uppercase leading-[1.05] tracking-[-0.03em]"
+            >
+              {word}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Content */}
@@ -210,7 +211,7 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
           ) : (
             <span
               className={cn(
-                'flex items-center gap-1 text-[0.6875rem] font-bold px-2.5 py-1 rounded-full flex-shrink-0',
+                'flex items-center gap-1.5 text-[0.6875rem] font-bold px-3 py-1.5 rounded-full flex-shrink-0',
                 started ? 'bg-zest text-court-deep' : 'bg-mint text-court-deep'
               )}
             >
@@ -232,7 +233,12 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
               style={{ width: `${progress.percentage}%` }}
             />
           </div>
-          <span className="text-[0.6875rem] font-bold text-mist tabular-nums">
+          <span
+            className={cn(
+              'text-[0.6875rem] font-bold tabular-nums',
+              progress.completed > 0 ? 'text-mint' : 'text-mist'
+            )}
+          >
             {progress.completed}/{progress.total}
           </span>
         </div>

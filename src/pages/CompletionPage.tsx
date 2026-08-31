@@ -68,8 +68,20 @@ export default function CompletionPage() {
     }
   }
 
-  const dayName = dayTitle ? dayTitle.split(': ')[1] || dayTitle : 'Workout';
   const [shareState, setShareState] = useState<'idle' | 'busy' | 'saved'>('idle');
+
+  if (!weekNum || !dayTitle) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+        <p className="text-mist">Workout not found.</p>
+        <button onClick={() => navigate('/')} className="text-white font-bold underline">
+          Back to programme
+        </button>
+      </div>
+    );
+  }
+
+  const dayName = dayTitle.split(': ')[1] || dayTitle;
 
   const handleShare = async () => {
     if (!state || shareState === 'busy') return;
@@ -100,12 +112,12 @@ export default function CompletionPage() {
       {!reduceMotion && <Confetti />}
 
       <main className="max-w-xl mx-auto w-full px-5 flex-1 flex flex-col justify-center py-12">
-        <motion.p className="text-sm font-bold text-mist mb-3" {...rise(0.05)}>
+        <motion.p className="text-sm font-bold text-mist mb-4" {...rise(0.05)}>
           Week {weekNum} · {dayName}
         </motion.p>
 
         <motion.h1
-          className="text-[3.25rem] leading-[0.95] font-bold tracking-[-0.03em] uppercase"
+          className="text-[4rem] leading-[0.92] font-bold tracking-[-0.04em] uppercase"
           {...rise(0.12)}
         >
           Nice
@@ -119,23 +131,23 @@ export default function CompletionPage() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.25 }}
         >
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-[0.6875rem] font-bold opacity-70">Duration</p>
-              <p className="text-2xl font-bold tabular-nums tracking-[-0.02em] mt-1">
+          <div className="grid grid-cols-3 divide-x divide-court-deep/15">
+            <div className="pr-4">
+              <p className="text-xs font-bold text-court-deep/60">Duration</p>
+              <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {state ? formatElapsed(state.elapsed) : '—'}
               </p>
             </div>
-            <div>
-              <p className="text-[0.6875rem] font-bold opacity-70">Volume</p>
-              <p className="text-2xl font-bold tabular-nums tracking-[-0.02em] mt-1">
+            <div className="px-4">
+              <p className="text-xs font-bold text-court-deep/60">Volume</p>
+              <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {state ? `${Math.round(state.volume).toLocaleString()}` : '—'}
-                <span className="text-sm font-bold ml-0.5">kg</span>
+                <span className="text-sm font-bold ml-0.5 text-court-deep/70">kg</span>
               </p>
             </div>
-            <div>
-              <p className="text-[0.6875rem] font-bold opacity-70">Sets</p>
-              <p className="text-2xl font-bold tabular-nums tracking-[-0.02em] mt-1">
+            <div className="pl-4">
+              <p className="text-xs font-bold text-court-deep/60">Sets</p>
+              <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {state ? `${state.setsDone}/${state.totalSets}` : '—'}
               </p>
             </div>
@@ -158,7 +170,7 @@ export default function CompletionPage() {
             hapticTap();
             navigate(`/week/${weekNum ?? 1}`);
           }}
-          className="mt-3 w-full bg-white text-court font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
+          className="mt-3 w-full bg-white/10 text-white font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
           {...rise(0.42)}
         >
           Done
@@ -169,7 +181,7 @@ export default function CompletionPage() {
             hapticTap();
             navigate('/');
           }}
-          className="mt-3 w-full text-mist font-bold text-sm py-2"
+          className="mt-4 w-full text-mist font-bold text-sm py-2"
           {...rise(0.5)}
         >
           Back to programme

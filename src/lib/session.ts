@@ -22,8 +22,15 @@ export function startSession(dayId: string): ActiveSession {
   return session;
 }
 
-export function endSession() {
-  window.localStorage.removeItem(KEY);
+/**
+ * Ends `dayId`'s session. A no-op when another day's session owns the key —
+ * e.g. a second tab took over via "End it and start this one" — so a stale
+ * tab's Finish can never wipe the session now running elsewhere.
+ */
+export function endSession(dayId: string) {
+  if (getActiveSession()?.dayId === dayId) {
+    window.localStorage.removeItem(KEY);
+  }
 }
 
 /** Polls the active session once a second — usable from any page. */

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Check, Timer, Plus, X, History } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -10,24 +10,31 @@ import { BottomSheet } from '../components/BottomSheet';
 import {
   unlockAudio,
   playSetDone,
-  playRestOver,
   playWorkoutDone,
   hapticSetDone,
   hapticSetUndone,
   hapticExerciseDone,
   hapticWorkoutDone,
-  hapticRestOver,
   hapticTap,
   hapticSelect,
   notificationsSupported,
   notificationPermission,
   requestNotifications,
-  notifyRestOver,
 } from '../lib/feedback';
+import { startRest, extendRest, skipRest, subscribeRest, getRest, getRestRemaining } from '../lib/rest';
 import { ActiveSession, getActiveSession, startSession, endSession } from '../lib/session';
 import { useEntranceOnce } from '../lib/animation';
 
 const REST_OVERRIDES_KEY = 'vb-rest-overrides-v1';
+
+/**
+ * Numeric placeholder hint from a reps prescription. Only a leading number (or
+ * range) counts: '6' → '6', '6-8' → '6-8', '8/leg' → '8', '8 / 30 s' → '8'.
+ * Non-numeric prescriptions ('Max-2') yield undefined — never '-2' or '830'.
+ */
+function repsPlaceholder(reps: string): string | undefined {
+  return reps.trim().match(/^\d+(?:-\d+)?/)?.[0];
+}
 const REST_OPTIONS = [0, 30, 60, 90, 120, 150, 180, 240, 300];
 
 const SET_TYPES: { type: SetType | undefined; letter: string; label: string; hint: string; color: string }[] = [
@@ -39,14 +46,25 @@ const SET_TYPES: { type: SetType | undefined; letter: string; label: string; hin
 
 const SET_TYPE_COLOR: Record<SetType, string> = { W: 'text-zest', F: 'text-flame', D: 'text-mist' };
 
+function conflictFor(dayId: string | undefined): ActiveSession | null {
+  if (!dayId) return null;
+  const s = getActiveSession();
+  return s && s.dayId !== dayId ? s : null;
+}
+
 function useSessionTimer(dayId: string | undefined) {
   const [elapsed, setElapsed] = useState(0);
   // Another day's session already running → the user must resolve it first.
-  const [conflict, setConflict] = useState<ActiveSession | null>(() => {
-    if (!dayId) return null;
-    const s = getActiveSession();
-    return s && s.dayId !== dayId ? s : null;
-  });
+  const [conflict, setConflict] = useState<ActiveSession | null>(() => conflictFor(dayId));
+
+  // The route param can change without remounting (e.g. "Go back to that workout"
+  // navigates /workout/w1-d2 → /workout/w1-d1). Re-derive the conflict synchronously
+  // during render so the stale sheet never blocks the resumed workout.
+  const [prevDayId, setPrevDayId] = useState(dayId);
+  if (dayId !== prevDayId) {
+    setPrevDayId(dayId);
+    setConflict(conflictFor(dayId));
+  }
 
   useEffect(() => {
     if (!dayId || conflict) return;
@@ -66,7 +84,13 @@ function useSessionTimer(dayId: string | undefined) {
     setConflict(null);
   };
 
-  return { elapsed, clear: endSession, conflict, takeOver };
+  // Only end the session this page owns — if another tab took over (the session
+  // now belongs to a different day), leave it running.
+  const clear = () => {
+    if (dayId) endSession(dayId);
+  };
+
+  return { elapsed, clear, conflict, takeOver };
 }
 
 export function formatElapsed(seconds: number): string {
@@ -79,46 +103,13 @@ export function formatElapsed(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-type RestState = { endsAt: number; total: number; label: string };
-
 export default function WorkoutPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
 
-  const entered = useEntranceOnce('workout');
-  const [completedSets, setCompletedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
-  const [restOverrides, setRestOverrides] = useLocalStorage<Record<string, number>>(REST_OVERRIDES_KEY, {});
-  const { elapsed, clear, conflict, takeOver } = useSessionTimer(id);
-
-  const [rest, setRest] = useState<RestState | null>(null);
-  const [restRemaining, setRestRemaining] = useState(0);
-  const [setTypeTarget, setSetTypeTarget] = useState<{ exercise: Exercise; setIndex: number } | null>(null);
-  const [restTarget, setRestTarget] = useState<Exercise | null>(null);
-  const [historyTarget, setHistoryTarget] = useState<Exercise | null>(null);
-  const [justCompleted, setJustCompleted] = useState<string | null>(null);
-  const [notifPerm, setNotifPerm] = useState(notificationPermission());
-
-  // Rest countdown
-  useEffect(() => {
-    if (!rest) return;
-    const tick = () => {
-      const remaining = Math.ceil((rest.endsAt - Date.now()) / 1000);
-      if (remaining <= 0) {
-        setRest(null);
-        hapticRestOver();
-        playRestOver();
-        if (document.visibilityState !== 'visible') void notifyRestOver(rest.label);
-      } else {
-        setRestRemaining(remaining);
-      }
-    };
-    tick();
-    const interval = window.setInterval(tick, 250);
-    return () => window.clearInterval(interval);
-  }, [rest]);
-
-  // Find the day across all weeks
+  // Find the day across all weeks (before any session side effects — an invalid
+  // id must never start a session, only render the not-found page below).
   let day: WorkoutDay | undefined;
   let weekNum = 1;
   for (const week of TRAINING_PLAN) {
@@ -129,6 +120,21 @@ export default function WorkoutPage() {
       break;
     }
   }
+
+  const entered = useEntranceOnce('workout');
+  const [completedSets, setCompletedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
+  const [restOverrides, setRestOverrides] = useLocalStorage<Record<string, number>>(REST_OVERRIDES_KEY, {});
+  const { elapsed, clear, conflict, takeOver } = useSessionTimer(day ? id : undefined);
+
+  // Rest countdown lives in a module-level store (src/lib/rest.ts) so it — and
+  // its expiry feedback — survives this page unmounting on in-app navigation.
+  const rest = useSyncExternalStore(subscribeRest, getRest);
+  const restRemaining = useSyncExternalStore(subscribeRest, getRestRemaining);
+  const [setTypeTarget, setSetTypeTarget] = useState<{ exercise: Exercise; setIndex: number } | null>(null);
+  const [restTarget, setRestTarget] = useState<Exercise | null>(null);
+  const [historyTarget, setHistoryTarget] = useState<Exercise | null>(null);
+  const [justCompleted, setJustCompleted] = useState<string | null>(null);
+  const [notifPerm, setNotifPerm] = useState(notificationPermission());
 
   if (!day) {
     return (
@@ -193,8 +199,7 @@ export default function WorkoutPage() {
       }
       const restSec = restFor(exercise);
       if (restSec > 0) {
-        setRestRemaining(restSec);
-        setRest({ endsAt: Date.now() + restSec * 1000, total: restSec, label: exercise.name });
+        startRest({ endsAt: Date.now() + restSec * 1000, total: restSec, label: exercise.name });
       }
     } else {
       hapticSetUndone();
@@ -261,10 +266,10 @@ export default function WorkoutPage() {
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="min-w-0 flex-1">
-            <h1 className="font-bold tracking-[-0.02em] leading-tight truncate">
+            <h1 className="text-lg font-bold tracking-[-0.02em] leading-tight truncate">
               {day.title.split(': ')[1] || day.title}
             </h1>
-            <p className="text-[0.6875rem] font-medium text-mist">
+            <p className="text-[0.6875rem] font-bold text-mist">
               Week {weekNum} · Day {day.title.split(':')[0].replace('Day ', '')}
             </p>
           </div>
@@ -276,7 +281,7 @@ export default function WorkoutPage() {
           </button>
         </div>
         {/* header progress bar */}
-        <div className="h-1 bg-court-deep">
+        <div className="h-1.5 bg-court-deep">
           <div
             className="h-full bg-mint transition-all duration-500"
             style={{ width: `${progress.percentage}%` }}
@@ -344,7 +349,7 @@ export default function WorkoutPage() {
                 <button
                   onClick={() => {
                     hapticTap();
-                    setRest((r) => (r ? { ...r, endsAt: r.endsAt + 15000, total: r.total + 15 } : r));
+                    extendRest(15);
                   }}
                   className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-xs font-bold px-3 py-2 rounded-full transition-colors"
                 >
@@ -353,7 +358,7 @@ export default function WorkoutPage() {
                 <button
                   onClick={() => {
                     hapticTap();
-                    setRest(null);
+                    skipRest();
                   }}
                   aria-label="Skip rest"
                   className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
@@ -378,7 +383,7 @@ export default function WorkoutPage() {
         onClose={() => setSetTypeTarget(null)}
         title="Select set type"
       >
-        <div className="space-y-1">
+        <div className="space-y-2">
           {SET_TYPES.map((option) => {
             const currentType = setTypeTarget
               ? completedSets[`${setTypeTarget.exercise.id}-${setTypeTarget.setIndex}`]?.setType
@@ -392,16 +397,23 @@ export default function WorkoutPage() {
                   if (setTypeTarget) setSetType(setTypeTarget.exercise.id, setTypeTarget.setIndex, option.type);
                 }}
                 className={cn(
-                  'w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-left transition-colors',
-                  selected ? 'bg-white/15' : 'hover:bg-white/10'
+                  'w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl text-left transition-colors',
+                  selected ? 'bg-white/15' : 'bg-white/5 hover:bg-white/10'
                 )}
               >
-                <span className={cn('w-6 text-center text-lg font-bold', option.color)}>{option.letter}</span>
-                <span className="flex-1 min-w-0">
-                  <span className="block font-bold text-sm">{option.label}</span>
-                  <span className="block text-xs text-mist">{option.hint}</span>
+                <span
+                  className={cn(
+                    'w-10 h-10 rounded-xl bg-court-deep/60 flex items-center justify-center text-lg font-bold tabular-nums flex-shrink-0',
+                    option.color
+                  )}
+                >
+                  {option.letter}
                 </span>
-                {selected && <Check className="w-4 h-4 text-mint flex-shrink-0" strokeWidth={3} />}
+                <span className="flex-1 min-w-0">
+                  <span className="block font-bold text-[0.9375rem] leading-snug">{option.label}</span>
+                  <span className="block text-xs text-mist mt-0.5">{option.hint}</span>
+                </span>
+                {selected && <Check className="w-5 h-5 text-mint flex-shrink-0" strokeWidth={3} />}
               </button>
             );
           })}
@@ -412,7 +424,8 @@ export default function WorkoutPage() {
       <BottomSheet
         open={restTarget !== null}
         onClose={() => setRestTarget(null)}
-        title={restTarget ? `Rest timer · ${restTarget.name}` : 'Rest timer'}
+        title="Rest timer"
+        subtitle={restTarget?.name}
       >
         <div className="grid grid-cols-3 gap-2">
           {REST_OPTIONS.map((seconds) => {
@@ -428,7 +441,7 @@ export default function WorkoutPage() {
                   }
                 }}
                 className={cn(
-                  'py-3 rounded-xl font-bold text-sm tabular-nums transition-colors',
+                  'py-3.5 rounded-xl font-bold text-[0.9375rem] tabular-nums transition-colors',
                   selected ? 'bg-mint text-court-deep' : 'bg-white/10 hover:bg-white/20'
                 )}
               >
@@ -437,7 +450,7 @@ export default function WorkoutPage() {
             );
           })}
         </div>
-        <p className="text-xs text-mist text-center mt-4">
+        <p className="text-xs text-mist text-center leading-relaxed mt-4 px-4">
           Starts automatically when you tick a set. Saved for this exercise.
         </p>
 
@@ -472,6 +485,7 @@ export default function WorkoutPage() {
         open={historyTarget !== null}
         onClose={() => setHistoryTarget(null)}
         title={historyTarget?.name ?? 'History'}
+        subtitle="Exercise history"
       >
         {historyTarget && <ExerciseHistory exercise={historyTarget} completedSets={completedSets} />}
       </BottomSheet>
@@ -598,25 +612,25 @@ const ExerciseHistory: React.FC<{ exercise: Exercise; completedSets: ProgressMap
       {exercise.tracking === 'weighted' && chartPoints.length >= 2 && (
         <TopWeightChart points={chartPoints.map((e) => ({ week: e.weekNumber, weight: e.topWeight }))} />
       )}
-      <div className="space-y-5">
+      <div className="space-y-6">
         {recentFirst.map((entry) => (
           <div key={entry.weekNumber}>
-            <div className="flex items-baseline justify-between mb-1.5">
-              <p className="font-bold">Week {entry.weekNumber}</p>
-              <p className="text-xs text-mist">{entry.prescription}</p>
+            <div className="flex items-baseline justify-between mb-2">
+              <p className="font-bold tracking-[-0.02em]">Week {entry.weekNumber}</p>
+              <p className="text-xs font-medium text-mist tabular-nums">{entry.prescription}</p>
             </div>
-            <div className="space-y-1">
+            <div className="bg-white/5 rounded-2xl divide-y divide-white/[0.06] overflow-hidden">
               {entry.sets.map((s, i) => (
-                <div key={i} className="flex items-center gap-3 bg-white/5 rounded-lg px-3 py-2">
+                <div key={i} className="flex items-center gap-3.5 px-3.5 py-2.5">
                   <span
                     className={cn(
-                      'w-5 text-center text-xs font-bold',
+                      'w-5 text-center text-xs font-bold tabular-nums',
                       s.setType ? SET_TYPE_COLOR[s.setType] : 'text-mist'
                     )}
                   >
                     {s.setType ?? i + 1}
                   </span>
-                  <span className="text-sm font-bold tabular-nums">{s.label}</span>
+                  <span className="text-sm font-bold tabular-nums tracking-[-0.01em]">{s.label}</span>
                 </div>
               ))}
             </div>
@@ -638,17 +652,26 @@ const TopWeightChart: React.FC<{ points: { week: number; weight: number }[] }> =
   const x = (i: number) => PAD + (i / (points.length - 1)) * (W - PAD * 2);
   const y = (w: number) => H - PAD - ((w - min) / range) * (H - PAD * 2);
   const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(p.weight)}`).join(' ');
+  const area = `${path} L${x(points.length - 1)},${H} L${x(0)},${H} Z`;
   const last = points[points.length - 1];
+  const heaviest = points.reduce((best, p) => (p.weight > best.weight ? p : best));
 
   return (
-    <div className="bg-white/5 rounded-2xl px-4 pt-3 pb-1 mb-5">
+    <div className="bg-white/5 rounded-2xl px-4 pt-3.5 pb-1 mb-6">
       <p className="text-xs text-mist font-medium">
-        Heaviest set · <span className="text-mint font-bold">{last.weight} kg</span> in week {last.week}
+        Heaviest set · <span className="text-mint font-bold">{heaviest.weight} kg</span> in week {heaviest.week}
       </p>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full mt-1">
+        <defs>
+          <linearGradient id="top-weight-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#7bf1a8" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="#7bf1a8" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <path d={area} fill="url(#top-weight-fill)" />
         <path d={path} fill="none" stroke="#7bf1a8" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
         {points.map((p, i) => (
-          <circle key={i} cx={x(i)} cy={y(p.weight)} r={4} fill="#7bf1a8" />
+          <circle key={i} cx={x(i)} cy={y(p.weight)} r={i === points.length - 1 ? 5 : 3.5} fill="#7bf1a8" />
         ))}
       </svg>
       <div className="flex justify-between text-[0.625rem] font-bold text-mist -mt-1 pb-1">
@@ -665,7 +688,7 @@ const Stat: React.FC<{ label: string; value: string; accent?: string; pop?: bool
   accent,
   pop,
 }) => (
-  <div className="bg-white/10 rounded-2xl px-3 py-3">
+  <div className="bg-white/10 rounded-2xl px-3.5 py-3">
     <p className="text-[0.6875rem] font-bold text-mist">{label}</p>
     {pop ? (
       <motion.p
@@ -673,12 +696,12 @@ const Stat: React.FC<{ label: string; value: string; accent?: string; pop?: bool
         initial={{ scale: 1.25 }}
         animate={{ scale: 1 }}
         transition={{ type: 'spring', stiffness: 500, damping: 22 }}
-        className={cn('text-lg font-bold tabular-nums tracking-[-0.02em] mt-0.5 origin-left', accent)}
+        className={cn('text-xl font-bold tabular-nums tracking-[-0.02em] leading-snug mt-0.5 origin-left', accent)}
       >
         {value}
       </motion.p>
     ) : (
-      <p className={cn('text-lg font-bold tabular-nums tracking-[-0.02em] mt-0.5', accent)}>{value}</p>
+      <p className={cn('text-xl font-bold tabular-nums tracking-[-0.02em] leading-snug mt-0.5', accent)}>{value}</p>
     )}
   </div>
 );
@@ -748,14 +771,14 @@ const ExerciseSection: React.FC<{
           hapticTap();
           onConfigureRest();
         }}
-        className="flex items-center gap-1.5 text-sm font-bold text-mint py-1.5 -ml-0.5 hover:opacity-80 transition-opacity"
+        className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/15 rounded-full pl-2.5 pr-3 py-1.5 mt-1.5 text-[0.8125rem] font-bold text-mint tabular-nums transition-colors"
       >
-        <Timer className="w-4 h-4" />
+        <Timer className="w-3.5 h-3.5" />
         Rest timer: {restSec === 0 ? 'Off' : formatElapsed(restSec)}
       </button>
 
       {/* Table header */}
-      <div className="grid grid-cols-12 gap-2 mt-3 mb-2 px-1 text-[0.625rem] font-bold text-mist uppercase text-center">
+      <div className="grid grid-cols-12 gap-2 mt-3.5 mb-2 px-1 text-[0.625rem] font-bold text-mist uppercase text-center">
         <div className="col-span-1">Set</div>
         <div className={cn('text-left', tracking === 'weighted' ? 'col-span-3' : 'col-span-4')}>Previous</div>
         {tracking === 'weighted' && <div className="col-span-3">kg</div>}
@@ -786,7 +809,7 @@ const ExerciseSection: React.FC<{
               key={setIndex}
               className={cn(
                 'grid grid-cols-12 gap-2 items-center px-1 py-1.5 rounded-xl transition-colors',
-                log.completed && 'bg-mint/20'
+                log.completed && 'bg-mint/20 ring-1 ring-inset ring-mint/25'
               )}
             >
               <button
@@ -830,7 +853,7 @@ const ExerciseSection: React.FC<{
                     <input
                       type="number"
                       inputMode="numeric"
-                      placeholder={prevLog?.actualReps || exercise.reps.replace(/[^0-9-]/g, '') || '—'}
+                      placeholder={prevLog?.actualReps || repsPlaceholder(exercise.reps) || '—'}
                       value={log.actualReps || ''}
                       onChange={(e) => updateSetLog(exercise.id, setIndex, 'actualReps', e.target.value)}
                       disabled={log.completed}
@@ -845,7 +868,7 @@ const ExerciseSection: React.FC<{
                   <input
                     type="number"
                     inputMode="numeric"
-                    placeholder={prevLog?.actualReps || exercise.reps.replace(/[^0-9-]/g, '') || '—'}
+                    placeholder={prevLog?.actualReps || repsPlaceholder(exercise.reps) || '—'}
                     value={log.actualReps || ''}
                     onChange={(e) => updateSetLog(exercise.id, setIndex, 'actualReps', e.target.value)}
                     disabled={log.completed}

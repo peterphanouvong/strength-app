@@ -93,6 +93,34 @@ export async function requestNotifications(): Promise<NotificationPermission | '
   return Notification.requestPermission();
 }
 
+/**
+ * Hand rest-expiry alerting to the service worker (public/sw-rest-timer.js).
+ * The page's own interval is frozen while a backgrounded PWA is suspended, so
+ * the worker — which keeps running — must own the "fire at endsAt" schedule.
+ * Not gated on permission here: the worker checks at fire time, so granting
+ * mid-rest (via "Notify me when rest ends") still works.
+ */
+export async function scheduleRestOverNotification(endsAt: number, exerciseName: string) {
+  try {
+    if (!('serviceWorker' in navigator)) return;
+    const reg = await navigator.serviceWorker.ready;
+    reg.active?.postMessage({ type: 'schedule-rest-notification', endsAt, label: exerciseName });
+  } catch {
+    // notifications are best-effort
+  }
+}
+
+/** Cancel a pending service-worker rest-expiry notification (rest skipped). */
+export async function cancelRestOverNotification() {
+  try {
+    if (!('serviceWorker' in navigator)) return;
+    const reg = await navigator.serviceWorker.ready;
+    reg.active?.postMessage({ type: 'cancel-rest-notification' });
+  } catch {
+    // notifications are best-effort
+  }
+}
+
 /** Best-effort local notification via the service worker (works in installed PWAs). */
 export async function notifyRestOver(exerciseName: string) {
   try {
