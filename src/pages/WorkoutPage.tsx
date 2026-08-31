@@ -389,7 +389,7 @@ export default function WorkoutPage() {
         onClose={() => setSetTypeTarget(null)}
         title="Select set type"
       >
-        <div className="space-y-1">
+        <div className="space-y-2">
           {SET_TYPES.map((option) => {
             const currentType = setTypeTarget
               ? completedSets[`${setTypeTarget.exercise.id}-${setTypeTarget.setIndex}`]?.setType
@@ -403,16 +403,23 @@ export default function WorkoutPage() {
                   if (setTypeTarget) setSetType(setTypeTarget.exercise.id, setTypeTarget.setIndex, option.type);
                 }}
                 className={cn(
-                  'w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-left transition-colors',
-                  selected ? 'bg-white/15' : 'hover:bg-white/10'
+                  'w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl text-left transition-colors',
+                  selected ? 'bg-white/15' : 'bg-white/5 hover:bg-white/10'
                 )}
               >
-                <span className={cn('w-6 text-center text-lg font-bold', option.color)}>{option.letter}</span>
-                <span className="flex-1 min-w-0">
-                  <span className="block font-bold text-sm">{option.label}</span>
-                  <span className="block text-xs text-mist">{option.hint}</span>
+                <span
+                  className={cn(
+                    'w-10 h-10 rounded-xl bg-court-deep/60 flex items-center justify-center text-lg font-bold tabular-nums flex-shrink-0',
+                    option.color
+                  )}
+                >
+                  {option.letter}
                 </span>
-                {selected && <Check className="w-4 h-4 text-mint flex-shrink-0" strokeWidth={3} />}
+                <span className="flex-1 min-w-0">
+                  <span className="block font-bold text-[0.9375rem] leading-snug">{option.label}</span>
+                  <span className="block text-xs text-mist mt-0.5">{option.hint}</span>
+                </span>
+                {selected && <Check className="w-5 h-5 text-mint flex-shrink-0" strokeWidth={3} />}
               </button>
             );
           })}
@@ -423,7 +430,8 @@ export default function WorkoutPage() {
       <BottomSheet
         open={restTarget !== null}
         onClose={() => setRestTarget(null)}
-        title={restTarget ? `Rest timer · ${restTarget.name}` : 'Rest timer'}
+        title="Rest timer"
+        subtitle={restTarget?.name}
       >
         <div className="grid grid-cols-3 gap-2">
           {REST_OPTIONS.map((seconds) => {
@@ -439,7 +447,7 @@ export default function WorkoutPage() {
                   }
                 }}
                 className={cn(
-                  'py-3 rounded-xl font-bold text-sm tabular-nums transition-colors',
+                  'py-3.5 rounded-xl font-bold text-[0.9375rem] tabular-nums transition-colors',
                   selected ? 'bg-mint text-court-deep' : 'bg-white/10 hover:bg-white/20'
                 )}
               >
@@ -448,7 +456,7 @@ export default function WorkoutPage() {
             );
           })}
         </div>
-        <p className="text-xs text-mist text-center mt-4">
+        <p className="text-xs text-mist text-center leading-relaxed mt-4 px-4">
           Starts automatically when you tick a set. Saved for this exercise.
         </p>
 
@@ -483,6 +491,7 @@ export default function WorkoutPage() {
         open={historyTarget !== null}
         onClose={() => setHistoryTarget(null)}
         title={historyTarget?.name ?? 'History'}
+        subtitle="Exercise history"
       >
         {historyTarget && <ExerciseHistory exercise={historyTarget} completedSets={completedSets} />}
       </BottomSheet>
@@ -609,25 +618,25 @@ const ExerciseHistory: React.FC<{ exercise: Exercise; completedSets: ProgressMap
       {exercise.tracking === 'weighted' && chartPoints.length >= 2 && (
         <TopWeightChart points={chartPoints.map((e) => ({ week: e.weekNumber, weight: e.topWeight }))} />
       )}
-      <div className="space-y-5">
+      <div className="space-y-6">
         {recentFirst.map((entry) => (
           <div key={entry.weekNumber}>
-            <div className="flex items-baseline justify-between mb-1.5">
-              <p className="font-bold">Week {entry.weekNumber}</p>
-              <p className="text-xs text-mist">{entry.prescription}</p>
+            <div className="flex items-baseline justify-between mb-2">
+              <p className="font-bold tracking-[-0.02em]">Week {entry.weekNumber}</p>
+              <p className="text-xs font-medium text-mist tabular-nums">{entry.prescription}</p>
             </div>
-            <div className="space-y-1">
+            <div className="bg-white/5 rounded-2xl divide-y divide-white/[0.06] overflow-hidden">
               {entry.sets.map((s, i) => (
-                <div key={i} className="flex items-center gap-3 bg-white/5 rounded-lg px-3 py-2">
+                <div key={i} className="flex items-center gap-3.5 px-3.5 py-2.5">
                   <span
                     className={cn(
-                      'w-5 text-center text-xs font-bold',
+                      'w-5 text-center text-xs font-bold tabular-nums',
                       s.setType ? SET_TYPE_COLOR[s.setType] : 'text-mist'
                     )}
                   >
                     {s.setType ?? i + 1}
                   </span>
-                  <span className="text-sm font-bold tabular-nums">{s.label}</span>
+                  <span className="text-sm font-bold tabular-nums tracking-[-0.01em]">{s.label}</span>
                 </div>
               ))}
             </div>
@@ -649,17 +658,25 @@ const TopWeightChart: React.FC<{ points: { week: number; weight: number }[] }> =
   const x = (i: number) => PAD + (i / (points.length - 1)) * (W - PAD * 2);
   const y = (w: number) => H - PAD - ((w - min) / range) * (H - PAD * 2);
   const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(p.weight)}`).join(' ');
+  const area = `${path} L${x(points.length - 1)},${H} L${x(0)},${H} Z`;
   const last = points[points.length - 1];
 
   return (
-    <div className="bg-white/5 rounded-2xl px-4 pt-3 pb-1 mb-5">
+    <div className="bg-white/5 rounded-2xl px-4 pt-3.5 pb-1 mb-6">
       <p className="text-xs text-mist font-medium">
         Heaviest set · <span className="text-mint font-bold">{last.weight} kg</span> in week {last.week}
       </p>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full mt-1">
+        <defs>
+          <linearGradient id="top-weight-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#7bf1a8" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="#7bf1a8" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <path d={area} fill="url(#top-weight-fill)" />
         <path d={path} fill="none" stroke="#7bf1a8" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
         {points.map((p, i) => (
-          <circle key={i} cx={x(i)} cy={y(p.weight)} r={4} fill="#7bf1a8" />
+          <circle key={i} cx={x(i)} cy={y(p.weight)} r={i === points.length - 1 ? 5 : 3.5} fill="#7bf1a8" />
         ))}
       </svg>
       <div className="flex justify-between text-[0.625rem] font-bold text-mist -mt-1 pb-1">
