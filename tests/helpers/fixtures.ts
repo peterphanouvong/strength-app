@@ -28,6 +28,32 @@ export async function seedStorage(
   );
 }
 
+/**
+ * Like seedStorage, but each key is only written when it is absent — so after a
+ * page.reload() the values the app wrote during the first visit are preserved
+ * (seedStorage's init script would clobber them on every navigation).
+ */
+export async function seedStorageOnce(
+  page: Page,
+  data: { progress?: Record<string, SetLog>; session?: { dayId: string; startedAt: number } | null; rest?: Record<string, number> }
+) {
+  await page.addInitScript(
+    ({ progress, session, rest, keys }) => {
+      if (progress && !window.localStorage.getItem(keys.p)) window.localStorage.setItem(keys.p, JSON.stringify(progress));
+      if (session && !window.localStorage.getItem(keys.s)) window.localStorage.setItem(keys.s, JSON.stringify(session));
+      if (rest && !window.localStorage.getItem(keys.r)) window.localStorage.setItem(keys.r, JSON.stringify(rest));
+    },
+    { progress: data.progress, session: data.session, rest: data.rest, keys: { p: PROGRESS_KEY, s: SESSION_KEY, r: REST_KEY } }
+  );
+}
+
+/** Seed raw strings (e.g. corrupt JSON) into localStorage before the app boots. */
+export async function seedRawStorage(page: Page, entries: Record<string, string>) {
+  await page.addInitScript((e) => {
+    for (const [k, v] of Object.entries(e)) window.localStorage.setItem(k, v);
+  }, entries);
+}
+
 export async function readStorage<T>(page: Page, key: string): Promise<T | null> {
   const raw = await page.evaluate((k) => window.localStorage.getItem(k), key);
   return raw ? (JSON.parse(raw) as T) : null;
