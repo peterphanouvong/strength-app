@@ -53,6 +53,9 @@ importers:
       vite:
         specifier: ^6.2.3
         version: 6.4.3(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.13)
+      web-haptics:
+        specifier: ^0.0.6
+        version: 0.0.6(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
     devDependencies:
       '@types/express':
         specifier: ^4.17.21
@@ -2648,6 +2651,23 @@ packages:
       tsx:
         optional: true
       yaml:
+        optional: true
+
+  web-haptics@0.0.6:
+    resolution: {integrity: sha512-eCzcf1LDi20+Fr0x9V3OkX92k0gxEQXaHajmhXHitsnk6SxPeshv8TBtBRqxyst8HI1uf2FyFVE7QS3jo1gkrw==}
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
+      svelte: '>=4'
+      vue: '>=3'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-dom:
+        optional: true
+      svelte:
+        optional: true
+      vue:
         optional: true
 
   web-streams-polyfill@3.3.3:
@@ -5408,6 +5428,11 @@ snapshots:
       lightningcss: 1.32.0
       terser: 5.51.2
       tsx: 4.23.13
+
+  web-haptics@0.0.6(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
+    optionalDependencies:
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
 
   web-streams-polyfill@3.3.3: {}
 
