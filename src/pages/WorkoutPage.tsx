@@ -97,10 +97,23 @@ export default function WorkoutPage() {
   const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
 
+  // Find the day across all weeks (before any session side effects — an invalid
+  // id must never start a session, only render the not-found page below).
+  let day: WorkoutDay | undefined;
+  let weekNum = 1;
+  for (const week of TRAINING_PLAN) {
+    const found = week.days.find((d) => d.id === id);
+    if (found) {
+      day = found;
+      weekNum = week.weekNumber;
+      break;
+    }
+  }
+
   const entered = useEntranceOnce('workout');
   const [completedSets, setCompletedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
   const [restOverrides, setRestOverrides] = useLocalStorage<Record<string, number>>(REST_OVERRIDES_KEY, {});
-  const { elapsed, clear, conflict, takeOver } = useSessionTimer(id);
+  const { elapsed, clear, conflict, takeOver } = useSessionTimer(day ? id : undefined);
 
   const [rest, setRest] = useState<RestState | null>(null);
   const [restRemaining, setRestRemaining] = useState(0);
@@ -128,18 +141,6 @@ export default function WorkoutPage() {
     const interval = window.setInterval(tick, 250);
     return () => window.clearInterval(interval);
   }, [rest]);
-
-  // Find the day across all weeks
-  let day: WorkoutDay | undefined;
-  let weekNum = 1;
-  for (const week of TRAINING_PLAN) {
-    const found = week.days.find((d) => d.id === id);
-    if (found) {
-      day = found;
-      weekNum = week.weekNumber;
-      break;
-    }
-  }
 
   if (!day) {
     return (
