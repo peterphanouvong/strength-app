@@ -124,6 +124,51 @@ test.describe('Q1 — stale tab Finish does not delete another tab’s session',
   });
 });
 
+// Q1 — a running rest countdown must survive in-app navigation. Pre-fix, `rest`
+// was plain WorkoutPage useState and the countdown interval was cleared on
+// unmount, so the two-tap round trip (back to /week/1, straight back in)
+// silently destroyed the timer: no bar on return, and the expiry
+// haptic/sound/notification never fired — exactly the stepped-away case the
+// "Notify me when rest ends" promise exists for.
+
+test.describe('Q1 — rest countdown survives in-app navigation', () => {
+  test('rest bar is still there, still ticking, after back to /week/1 and returning', async ({
+    page,
+  }) => {
+    const restBar = page.locator('div.fixed.bottom-4').filter({ hasText: 'Rest ·' });
+    const displayedRemaining = async () => {
+      const text = await restBar.getByText(/^\d+:\d{2}$/).textContent();
+      const [m, s] = (text ?? '0:00').split(':').map(Number);
+      return m * 60 + s;
+    };
+
+    await page.goto('/workout/w1-d1');
+    await expect(page.getByRole('heading', { name: /Hang Power Clean/ })).toBeVisible();
+
+    // Tick the first Hang Power Clean set — 3:00 default rest starts.
+    await page.getByRole('button', { name: 'Mark set complete' }).first().click();
+    await expect(restBar).toBeVisible();
+    await expect(restBar).toContainText('Rest · Hang Power Clean');
+
+    // In-app round trip: back button to the week overview, then straight back in.
+    await page.getByRole('button', { name: 'Back to week' }).click();
+    await expect(page).toHaveURL(/\/week\/1$/);
+    await page.getByRole('link', { name: /Lower Strength/ }).click();
+    await expect(page).toHaveURL(/\/workout\/w1-d1$/);
+
+    // The countdown survived: bar visible with ~3:00 minus the round trip left.
+    await expect(restBar).toBeVisible();
+    const remaining = await displayedRemaining();
+    expect(remaining).toBeGreaterThan(150); // generous slack for a slow round trip
+    expect(remaining).toBeLessThanOrEqual(180);
+
+    // And it is still ticking (the interval is alive, so expiry feedback can fire).
+    await expect
+      .poll(async () => remaining - (await displayedRemaining()), { timeout: 4_000 })
+      .toBeGreaterThanOrEqual(1);
+  });
+});
+
 test.describe('Q1 — second tab does not clobber first tab’s logged sets', () => {
   test('tab B ticking Back Squat set 1 keeps tab A’s Hang Power Clean set 1 (weight included) in storage and after reload', async ({
     page,

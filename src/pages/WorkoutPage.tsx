@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Check, Timer, Plus, X, History } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -10,20 +10,18 @@ import { BottomSheet } from '../components/BottomSheet';
 import {
   unlockAudio,
   playSetDone,
-  playRestOver,
   playWorkoutDone,
   hapticSetDone,
   hapticSetUndone,
   hapticExerciseDone,
   hapticWorkoutDone,
-  hapticRestOver,
   hapticTap,
   hapticSelect,
   notificationsSupported,
   notificationPermission,
   requestNotifications,
-  notifyRestOver,
 } from '../lib/feedback';
+import { startRest, extendRest, skipRest, subscribeRest, getRest, getRestRemaining } from '../lib/rest';
 import { ActiveSession, getActiveSession, startSession, endSession } from '../lib/session';
 import { useEntranceOnce } from '../lib/animation';
 
@@ -96,8 +94,6 @@ export function formatElapsed(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-type RestState = { endsAt: number; total: number; label: string };
-
 export default function WorkoutPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -121,32 +117,15 @@ export default function WorkoutPage() {
   const [restOverrides, setRestOverrides] = useLocalStorage<Record<string, number>>(REST_OVERRIDES_KEY, {});
   const { elapsed, clear, conflict, takeOver } = useSessionTimer(day ? id : undefined);
 
-  const [rest, setRest] = useState<RestState | null>(null);
-  const [restRemaining, setRestRemaining] = useState(0);
+  // Rest countdown lives in a module-level store (src/lib/rest.ts) so it — and
+  // its expiry feedback — survives this page unmounting on in-app navigation.
+  const rest = useSyncExternalStore(subscribeRest, getRest);
+  const restRemaining = useSyncExternalStore(subscribeRest, getRestRemaining);
   const [setTypeTarget, setSetTypeTarget] = useState<{ exercise: Exercise; setIndex: number } | null>(null);
   const [restTarget, setRestTarget] = useState<Exercise | null>(null);
   const [historyTarget, setHistoryTarget] = useState<Exercise | null>(null);
   const [justCompleted, setJustCompleted] = useState<string | null>(null);
   const [notifPerm, setNotifPerm] = useState(notificationPermission());
-
-  // Rest countdown
-  useEffect(() => {
-    if (!rest) return;
-    const tick = () => {
-      const remaining = Math.ceil((rest.endsAt - Date.now()) / 1000);
-      if (remaining <= 0) {
-        setRest(null);
-        hapticRestOver();
-        playRestOver();
-        if (document.visibilityState !== 'visible') void notifyRestOver(rest.label);
-      } else {
-        setRestRemaining(remaining);
-      }
-    };
-    tick();
-    const interval = window.setInterval(tick, 250);
-    return () => window.clearInterval(interval);
-  }, [rest]);
 
   if (!day) {
     return (
@@ -211,8 +190,7 @@ export default function WorkoutPage() {
       }
       const restSec = restFor(exercise);
       if (restSec > 0) {
-        setRestRemaining(restSec);
-        setRest({ endsAt: Date.now() + restSec * 1000, total: restSec, label: exercise.name });
+        startRest({ endsAt: Date.now() + restSec * 1000, total: restSec, label: exercise.name });
       }
     } else {
       hapticSetUndone();
@@ -362,7 +340,7 @@ export default function WorkoutPage() {
                 <button
                   onClick={() => {
                     hapticTap();
-                    setRest((r) => (r ? { ...r, endsAt: r.endsAt + 15000, total: r.total + 15 } : r));
+                    extendRest(15);
                   }}
                   className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-xs font-bold px-3 py-2 rounded-full transition-colors"
                 >
@@ -371,7 +349,7 @@ export default function WorkoutPage() {
                 <button
                   onClick={() => {
                     hapticTap();
-                    setRest(null);
+                    skipRest();
                   }}
                   aria-label="Skip rest"
                   className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
