@@ -7,6 +7,21 @@ import { cn } from '../lib/utils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { PROGRESS_KEY, ProgressMap, SetLog, SetType, getDayProgress, getDayVolume } from '../lib/progress';
 import { BottomSheet } from '../components/BottomSheet';
+import {
+  unlockAudio,
+  playSetDone,
+  playRestOver,
+  playWorkoutDone,
+  hapticSetDone,
+  hapticSetUndone,
+  hapticExerciseDone,
+  hapticWorkoutDone,
+  hapticRestOver,
+  notificationsSupported,
+  notificationPermission,
+  requestNotifications,
+  notifyRestOver,
+} from '../lib/feedback';
 
 const REST_OVERRIDES_KEY = 'vb-rest-overrides-v1';
 const REST_OPTIONS = [0, 30, 60, 90, 120, 150, 180, 240, 300];
@@ -66,6 +81,8 @@ export default function WorkoutPage() {
   const [restRemaining, setRestRemaining] = useState(0);
   const [setTypeTarget, setSetTypeTarget] = useState<{ exercise: Exercise; setIndex: number } | null>(null);
   const [restTarget, setRestTarget] = useState<Exercise | null>(null);
+  const [justCompleted, setJustCompleted] = useState<string | null>(null);
+  const [notifPerm, setNotifPerm] = useState(notificationPermission());
 
   // Rest countdown
   useEffect(() => {
@@ -74,7 +91,9 @@ export default function WorkoutPage() {
       const remaining = Math.ceil((rest.endsAt - Date.now()) / 1000);
       if (remaining <= 0) {
         setRest(null);
-        if ('vibrate' in navigator) navigator.vibrate?.([200, 100, 200]);
+        hapticRestOver();
+        playRestOver();
+        if (document.visibilityState !== 'visible') void notifyRestOver(rest.label);
       } else {
         setRestRemaining(remaining);
       }
@@ -118,6 +137,9 @@ export default function WorkoutPage() {
       navigate(`/week/${weekNum}`);
       return;
     }
+    unlockAudio();
+    hapticWorkoutDone();
+    playWorkoutDone();
     navigate(`/complete/${day!.id}`, {
       state: {
         elapsed,
@@ -133,6 +155,7 @@ export default function WorkoutPage() {
   const toggleSet = (exercise: Exercise, setIndex: number) => {
     const key = `${exercise.id}-${setIndex}`;
     const wasCompleted = completedSets[key]?.completed ?? false;
+    unlockAudio();
     setCompletedSets((prev) => {
       const current = prev[key] || { completed: false, weight: '', actualReps: '' };
       return {
@@ -141,11 +164,24 @@ export default function WorkoutPage() {
       };
     });
     if (!wasCompleted) {
+      // Dopamine: pop + burst + haptic + blip
+      setJustCompleted(`${key}:${Date.now()}`);
+      playSetDone();
+      const doneInExercise = Array.from({ length: exercise.sets }).filter(
+        (_, i) => i === setIndex || completedSets[`${exercise.id}-${i}`]?.completed
+      ).length;
+      if (doneInExercise === exercise.sets) {
+        hapticExerciseDone();
+      } else {
+        hapticSetDone();
+      }
       const restSec = restFor(exercise);
       if (restSec > 0) {
         setRestRemaining(restSec);
         setRest({ endsAt: Date.now() + restSec * 1000, total: restSec, label: exercise.name });
       }
+    } else {
+      hapticSetUndone();
     }
   };
 
@@ -238,8 +274,8 @@ export default function WorkoutPage() {
           transition={{ duration: 0.35 }}
         >
           <Stat label="Duration" value={formatElapsed(elapsed)} accent="text-mint" />
-          <Stat label="Volume" value={`${Math.round(volume).toLocaleString()} kg`} />
-          <Stat label="Sets" value={`${progress.completed}/${progress.total}`} />
+          <Stat label="Volume" value={`${Math.round(volume).toLocaleString()} kg`} pop />
+          <Stat label="Sets" value={`${progress.completed}/${progress.total}`} pop />
         </motion.div>
 
         <div className="space-y-10">
@@ -256,6 +292,7 @@ export default function WorkoutPage() {
                 weekNum={weekNum}
                 restSec={restFor(exercise)}
                 completedSets={completedSets}
+                justCompleted={justCompleted}
                 toggleSet={toggleSet}
                 updateSetLog={updateSetLog}
                 getPreviousSetLog={getPreviousSetLog}
@@ -375,15 +412,54 @@ export default function WorkoutPage() {
         <p className="text-xs text-mist text-center mt-4">
           Starts automatically when you tick a set. Saved for this exercise.
         </p>
+
+        {notificationsSupported() && (
+          <div className="mt-5 border-t border-white/10 pt-4">
+            {notifPerm === 'granted' ? (
+              <p className="text-xs text-mint font-bold text-center">
+                Notifications on — you'll get an alert when rest ends.
+              </p>
+            ) : notifPerm === 'denied' ? (
+              <p className="text-xs text-mist text-center">
+                Notifications are blocked — enable them for this app in your phone settings to get
+                rest alerts.
+              </p>
+            ) : (
+              <button
+                onClick={async () => setNotifPerm(await requestNotifications())}
+                className="w-full bg-white/10 hover:bg-white/20 font-bold text-sm py-3 rounded-xl transition-colors"
+              >
+                Notify me when rest ends
+              </button>
+            )}
+          </div>
+        )}
       </BottomSheet>
     </div>
   );
 }
 
-const Stat: React.FC<{ label: string; value: string; accent?: string }> = ({ label, value, accent }) => (
+const Stat: React.FC<{ label: string; value: string; accent?: string; pop?: boolean }> = ({
+  label,
+  value,
+  accent,
+  pop,
+}) => (
   <div className="bg-white/10 rounded-2xl px-3 py-3">
     <p className="text-[0.625rem] font-bold uppercase tracking-[0.15em] text-mist">{label}</p>
-    <p className={cn('text-lg font-bold tabular-nums tracking-[-0.02em] mt-0.5', accent)}>{value}</p>
+    {pop ? (
+      <motion.p
+        key={value}
+        initial={{ scale: 1.25 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+        className={cn('text-lg font-bold tabular-nums tracking-[-0.02em] mt-0.5 origin-left', accent)}
+      >
+        {value}
+      </motion.p>
+    ) : (
+      <p className={cn('text-lg font-bold tabular-nums tracking-[-0.02em] mt-0.5', accent)}>{value}</p>
+    )}
   </div>
 );
 
@@ -393,6 +469,7 @@ const ExerciseSection: React.FC<{
   weekNum: number;
   restSec: number;
   completedSets: ProgressMap;
+  justCompleted: string | null;
   toggleSet: (exercise: Exercise, setIndex: number) => void;
   updateSetLog: (exerciseId: string, setIndex: number, field: 'weight' | 'actualReps' | 'timeSec', value: string) => void;
   getPreviousSetLog: (exerciseName: string, currentWeekNum: number, setIndex: number) => SetLog | null;
@@ -404,6 +481,7 @@ const ExerciseSection: React.FC<{
   weekNum,
   restSec,
   completedSets,
+  justCompleted,
   toggleSet,
   updateSetLog,
   getPreviousSetLog,
@@ -461,6 +539,7 @@ const ExerciseSection: React.FC<{
           const key = `${exercise.id}-${setIndex}`;
           const log = completedSets[key] || { completed: false, weight: '', actualReps: '' };
           const prevLog = getPreviousSetLog(exercise.name, weekNum, setIndex);
+          const isJustCompleted = justCompleted?.startsWith(`${key}:`) ?? false;
 
           const inputClass = cn(
             'w-full text-center rounded-lg py-2.5 text-sm font-bold tabular-nums text-white',
@@ -556,12 +635,23 @@ const ExerciseSection: React.FC<{
                 <motion.button
                   onClick={() => toggleSet(exercise, setIndex)}
                   whileTap={{ scale: 0.85 }}
+                  animate={isJustCompleted ? { scale: [1, 1.3, 1], rotate: [0, -6, 0] } : { scale: 1 }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
                   aria-label={log.completed ? 'Mark set incomplete' : 'Mark set complete'}
                   className={cn(
-                    'w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-200',
+                    'relative w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-200',
                     log.completed ? 'bg-mint text-court-deep' : 'bg-white/10 text-mist hover:bg-white/20'
                   )}
                 >
+                  {isJustCompleted && (
+                    <motion.span
+                      key={justCompleted}
+                      className="absolute inset-0 rounded-xl border-2 border-mint pointer-events-none"
+                      initial={{ opacity: 0.9, scale: 1 }}
+                      animate={{ opacity: 0, scale: 2.1 }}
+                      transition={{ duration: 0.55, ease: 'easeOut' }}
+                    />
+                  )}
                   {log.completed ? (
                     <Check className="w-5 h-5" strokeWidth={3} />
                   ) : (
