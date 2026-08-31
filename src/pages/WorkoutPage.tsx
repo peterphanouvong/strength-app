@@ -77,7 +77,13 @@ function useSessionTimer(dayId: string | undefined) {
     setConflict(null);
   };
 
-  return { elapsed, clear: endSession, conflict, takeOver };
+  // Only end the session this page owns — if another tab took over (the session
+  // now belongs to a different day), leave it running.
+  const clear = () => {
+    if (dayId) endSession(dayId);
+  };
+
+  return { elapsed, clear, conflict, takeOver };
 }
 
 export function formatElapsed(seconds: number): string {

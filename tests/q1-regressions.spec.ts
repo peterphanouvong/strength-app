@@ -79,6 +79,51 @@ test.describe('Q1 — closing bottom sheet is not clickable mid-exit', () => {
 // first tick ran its functional updater against the empty map it mounted with and
 // setItem()'d the result, erasing every set the first tab had already logged.
 
+// Q1 — stale tab's Finish must not delete another tab's active session.
+// Pre-fix, finishWorkout() → clear() → endSession() removed vb-active-session-v1
+// unconditionally, with no check that the session still belonged to that tab's
+// day — so a tab whose session had been taken over ("End it and start this one"
+// in another tab) wiped the new tab's running session: the pill vanished and the
+// elapsed timer restarted from 0 on reload.
+
+test.describe('Q1 — stale tab Finish does not delete another tab’s session', () => {
+  test('tab A Finish after tab B took over leaves tab B’s w1-d2 session intact (startedAt preserved)', async ({
+    page,
+    context,
+  }) => {
+    // Tab A starts w1-d1 — a session for it lands in storage.
+    const tabA = page;
+    await tabA.goto('/workout/w1-d1');
+    await expect
+      .poll(async () => (await readStorage<Session>(tabA, SESSION_KEY))?.dayId)
+      .toBe('w1-d1');
+
+    // Tab B opens w1-d2, gets the conflict sheet, and takes over.
+    const tabB = await context.newPage();
+    await tabB.goto('/workout/w1-d2');
+    await expect(conflictSheet(tabB)).toBeVisible();
+    await tabB.getByRole('button', { name: 'End it and start this one' }).click();
+    await expect
+      .poll(async () => (await readStorage<Session>(tabB, SESSION_KEY))?.dayId)
+      .toBe('w1-d2');
+    const takenOver = await readStorage<Session>(tabB, SESSION_KEY);
+
+    // Tab A — unaware, its conflict state was computed at mount — taps Finish.
+    // (No sets logged, so it just navigates back to the week overview.)
+    await tabA.getByRole('button', { name: 'Finish' }).click();
+    await expect(tabA).toHaveURL(/\/week\/1$/);
+
+    // Tab B's running session survived: same dayId AND same startedAt.
+    const after = await readStorage<Session>(tabB, SESSION_KEY);
+    expect(after).toEqual(takenOver);
+
+    // And it survives a reload — the elapsed timer resumes, not restarts.
+    await tabB.reload();
+    const reloaded = await readStorage<Session>(tabB, SESSION_KEY);
+    expect(reloaded).toEqual(takenOver);
+  });
+});
+
 test.describe('Q1 — second tab does not clobber first tab’s logged sets', () => {
   test('tab B ticking Back Squat set 1 keeps tab A’s Hang Power Clean set 1 (weight included) in storage and after reload', async ({
     page,
