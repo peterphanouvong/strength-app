@@ -39,14 +39,25 @@ const SET_TYPES: { type: SetType | undefined; letter: string; label: string; hin
 
 const SET_TYPE_COLOR: Record<SetType, string> = { W: 'text-zest', F: 'text-flame', D: 'text-mist' };
 
+function conflictFor(dayId: string | undefined): ActiveSession | null {
+  if (!dayId) return null;
+  const s = getActiveSession();
+  return s && s.dayId !== dayId ? s : null;
+}
+
 function useSessionTimer(dayId: string | undefined) {
   const [elapsed, setElapsed] = useState(0);
   // Another day's session already running → the user must resolve it first.
-  const [conflict, setConflict] = useState<ActiveSession | null>(() => {
-    if (!dayId) return null;
-    const s = getActiveSession();
-    return s && s.dayId !== dayId ? s : null;
-  });
+  const [conflict, setConflict] = useState<ActiveSession | null>(() => conflictFor(dayId));
+
+  // The route param can change without remounting (e.g. "Go back to that workout"
+  // navigates /workout/w1-d2 → /workout/w1-d1). Re-derive the conflict synchronously
+  // during render so the stale sheet never blocks the resumed workout.
+  const [prevDayId, setPrevDayId] = useState(dayId);
+  if (dayId !== prevDayId) {
+    setPrevDayId(dayId);
+    setConflict(conflictFor(dayId));
+  }
 
   useEffect(() => {
     if (!dayId || conflict) return;
