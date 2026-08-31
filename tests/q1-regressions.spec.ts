@@ -213,6 +213,37 @@ test.describe('Q1 — second tab does not clobber first tab’s logged sets', ()
   });
 });
 
+// Q1 — TopWeightChart callout must name the actual heaviest set, not the most
+// recent week's top weight. Pre-fix it rendered points[points.length - 1] (the
+// latest chronological point) under the "Heaviest set" label, so a lighter
+// recent week masked an earlier PR.
+
+test.describe('Q1 — history chart callout shows the true heaviest set', () => {
+  test('Bench Press logged 100 kg in week 1 and 80 kg in week 5 → callout reads 100 kg in week 1', async ({
+    page,
+  }) => {
+    // Bench Press is w1-d2-e1 (block 1) and w5-d2-e2 (block 2) in the static plan.
+    await seedStorage(page, {
+      progress: {
+        'w1-d2-e1-0': { completed: true, weight: '100', actualReps: '5' },
+        'w5-d2-e2-0': { completed: true, weight: '80', actualReps: '5' },
+      },
+    });
+    await page.goto('/workout/w5-d2');
+
+    // Open the exercise history sheet via the Bench Press title.
+    await page.getByRole('button', { name: /Bench Press/ }).first().click();
+    const sheet = page.getByRole('dialog', { name: 'Bench Press' });
+    await expect(sheet).toBeVisible();
+
+    const callout = sheet.getByText(/Heaviest set/);
+    await expect(callout).toBeVisible();
+    await expect(callout).toHaveText(/Heaviest set · 100 kg in week 1/);
+    // And explicitly not the pre-fix "latest week" reading.
+    await expect(callout).not.toHaveText(/80 kg in week 5/);
+  });
+});
+
 // Q1 — unknown /complete/:id (stale share link / typed URL) must render the same
 // not-found state as the sibling routes, not a broken "Week · Workout" header
 // with dash stats and confetti whose Done button silently dumps you on /week/1.

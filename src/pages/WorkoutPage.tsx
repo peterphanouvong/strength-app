@@ -645,11 +645,12 @@ const TopWeightChart: React.FC<{ points: { week: number; weight: number }[] }> =
   const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(p.weight)}`).join(' ');
   const area = `${path} L${x(points.length - 1)},${H} L${x(0)},${H} Z`;
   const last = points[points.length - 1];
+  const heaviest = points.reduce((best, p) => (p.weight > best.weight ? p : best));
 
   return (
     <div className="bg-white/5 rounded-2xl px-4 pt-3.5 pb-1 mb-6">
       <p className="text-xs text-mist font-medium">
-        Heaviest set · <span className="text-mint font-bold">{last.weight} kg</span> in week {last.week}
+        Heaviest set · <span className="text-mint font-bold">{heaviest.weight} kg</span> in week {heaviest.week}
       </p>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full mt-1">
         <defs>
