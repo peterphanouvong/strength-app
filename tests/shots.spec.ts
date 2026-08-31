@@ -93,6 +93,42 @@ test.describe('shots', () => {
     await page.screenshot({ path: shot('v6b-pill') });
   });
 
+  // Entrance sequences: a mid-spring frame plus the settled frame, so critics can
+  // verify the offscreen→rest motion from stills (motion is JS-driven; the mid frame
+  // catches the element in flight below its rest position).
+  test('V6d rest bar entrance sequence', async ({ page }) => {
+    await seedStorage(page, {});
+    await page.goto('/workout/w1-d1');
+    await settle(page);
+    await page.getByRole('button', { name: 'Mark set complete' }).first().click();
+    await page.waitForTimeout(70);
+    await page.screenshot({ path: shot('v6d-rest-bar-entrance-mid') });
+    await settle(page, 700);
+    await page.screenshot({ path: shot('v6d-rest-bar-entrance-settled') });
+  });
+
+  test('V6e pill entrance sequence', async ({ page }) => {
+    await seedStorage(page, {
+      session: { dayId: 'w1-d1', startedAt: Date.now() - 5 * 60_000 },
+    });
+    await page.goto('/');
+    await page.waitForTimeout(120);
+    await page.screenshot({ path: shot('v6e-pill-entrance-mid') });
+    await settle(page, 800);
+    await page.screenshot({ path: shot('v6e-pill-entrance-settled') });
+  });
+
+  test('V6f rest bar exit sequence', async ({ page }) => {
+    await seedStorage(page, {});
+    await page.goto('/workout/w1-d1');
+    await settle(page);
+    await page.getByRole('button', { name: 'Mark set complete' }).first().click();
+    await settle(page, 700);
+    await page.getByRole('button', { name: 'Skip rest' }).click();
+    await page.waitForTimeout(80);
+    await page.screenshot({ path: shot('v6f-rest-bar-exit-mid') });
+  });
+
   test('V6c conflict sheet', async ({ page }) => {
     await seedStorage(page, {
       session: { dayId: 'w1-d1', startedAt: Date.now() - 12 * 60_000 },
