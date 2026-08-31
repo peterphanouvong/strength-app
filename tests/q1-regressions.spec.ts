@@ -212,3 +212,32 @@ test.describe('Q1 — second tab does not clobber first tab’s logged sets', ()
     await expect(hpcAfter.locator('input[inputmode="decimal"]').first()).toHaveValue('60');
   });
 });
+
+// Q1 — unknown /complete/:id (stale share link / typed URL) must render the same
+// not-found state as the sibling routes, not a broken "Week · Workout" header
+// with dash stats and confetti whose Done button silently dumps you on /week/1.
+
+test.describe('Q1 — unknown /complete/:id shows not-found, not a broken header', () => {
+  test('visiting /complete/no-such-day renders the not-found state instead of "Week · Workout"', async ({
+    page,
+  }) => {
+    await page.goto('/complete/no-such-day');
+
+    await expect(page.getByText('Workout not found.')).toBeVisible();
+
+    // Pre-fix header rendered "Week  · Workout" (weekNum undefined) with — stats.
+    await expect(page.getByText('Week · Workout')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Done' })).toHaveCount(0);
+    await expect(page.getByText('Duration')).toHaveCount(0);
+
+    // The escape hatch goes home, not to the silent /week/1 fallback.
+    await page.getByRole('button', { name: 'Back to programme' }).click();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  test('a valid direct visit to /complete/w1-d1 still renders its real header', async ({ page }) => {
+    await page.goto('/complete/w1-d1');
+    await expect(page.getByText(/Week 1 ·/)).toBeVisible();
+    await expect(page.getByText('Workout not found.')).toHaveCount(0);
+  });
+});

@@ -68,8 +68,20 @@ export default function CompletionPage() {
     }
   }
 
-  const dayName = dayTitle ? dayTitle.split(': ')[1] || dayTitle : 'Workout';
   const [shareState, setShareState] = useState<'idle' | 'busy' | 'saved'>('idle');
+
+  if (!weekNum || !dayTitle) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+        <p className="text-mist">Workout not found.</p>
+        <button onClick={() => navigate('/')} className="text-white font-bold underline">
+          Back to programme
+        </button>
+      </div>
+    );
+  }
+
+  const dayName = dayTitle.split(': ')[1] || dayTitle;
 
   const handleShare = async () => {
     if (!state || shareState === 'busy') return;
