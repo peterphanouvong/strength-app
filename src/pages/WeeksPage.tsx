@@ -63,32 +63,37 @@ export default function WeeksPage() {
       <main className="max-w-xl mx-auto px-5 pt-10 pb-16">
         {/* Hero */}
         <motion.header className="mb-10" {...rise(0)}>
-          <p className="text-sm font-bold text-mist mb-3">Volleyball Strength</p>
-          <h1 className="text-[2.75rem] leading-[0.95] font-bold tracking-[-0.03em]">
+          <p className="text-sm font-bold text-zest mb-3">Volleyball Strength</p>
+          <h1 className="text-[3.25rem] leading-[0.95] font-bold tracking-[-0.035em]">
             12-week
             <br />
             programme
           </h1>
-          <p className="text-sm text-mist mt-3">
+          <p className="text-sm text-mist mt-4">
             Strength &amp; power for volleyball. Pick a week to train.
           </p>
         </motion.header>
 
         {/* Blocks */}
-        <div className="space-y-12">
+        <div className="space-y-10">
           {blocks.map((block, blockIndex) => (
-            <section key={block.name}>
-              <motion.div {...rise(0.1 + blockIndex * 0.08)}>
-                <h2
-                  className={cn(
-                    'text-4xl font-bold uppercase tracking-[-0.04em] leading-none',
-                    BLOCK_TEXT_COLOR[block.name]
-                  )}
-                >
-                  {block.name}
-                </h2>
-                <p className="text-xs font-medium text-mist mt-2 mb-4">
-                  Block {block.numeral} · {block.range} · {BLOCK_TAGLINES[block.name]}
+            <section key={block.name} className="border-t border-dashed border-white/25 pt-8">
+              <motion.div className="mb-5" {...rise(0.1 + blockIndex * 0.08)}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <h2
+                    className={cn(
+                      'text-4xl font-bold uppercase tracking-[-0.04em] leading-none',
+                      BLOCK_TEXT_COLOR[block.name]
+                    )}
+                  >
+                    {block.name}
+                  </h2>
+                  <span className="text-xs font-bold text-white/70 tabular-nums flex-shrink-0">
+                    Block {block.numeral} · {block.range}
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-mist mt-2.5">
+                  {BLOCK_TAGLINES[block.name]}
                 </p>
               </motion.div>
 
@@ -118,9 +123,9 @@ const WeekRow: React.FC<{ week: WeekPlan; completedSets: ProgressMap }> = ({ wee
       className="block bg-white/10 rounded-2xl px-5 py-4 transition-transform active:scale-[0.98] hover:bg-white/15"
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h3 className="text-lg font-bold tracking-[-0.02em]">Week {week.weekNumber}</h3>
-          <p className="text-xs text-mist truncate mt-0.5">{week.focus}</p>
+          <p className="text-xs leading-snug text-mist line-clamp-2 mt-1">{week.focus}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {done ? (
@@ -133,12 +138,14 @@ const WeekRow: React.FC<{ week: WeekPlan; completedSets: ProgressMap }> = ({ wee
           <ChevronRight className="w-5 h-5 text-mist" />
         </div>
       </div>
-      <div className={cn('mt-3 h-2 rounded-full bg-court-deep/60 overflow-hidden', progress.percentage === 0 && 'opacity-60')}>
-        <div
-          className="h-full rounded-full bg-mint transition-all duration-500"
-          style={{ width: `${progress.percentage}%` }}
-        />
-      </div>
+      {progress.percentage > 0 && (
+        <div className="mt-3.5 h-2 rounded-full bg-court-deep/60 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-mint transition-all duration-500"
+            style={{ width: `${progress.percentage}%` }}
+          />
+        </div>
+      )}
     </Link>
   );
 };
