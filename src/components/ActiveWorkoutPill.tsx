@@ -28,7 +28,8 @@ export function ActiveWorkoutPill() {
     !session ||
     !title ||
     location.pathname === `/workout/${session.dayId}` ||
-    location.pathname.startsWith('/complete/');
+    location.pathname.startsWith('/complete/') ||
+    location.pathname.startsWith('/congrats/');
 
   // Stack above the tab bar (and above a preview page's Start CTA) instead of
   // overlapping the bottom controls; bottom-4 elsewhere.

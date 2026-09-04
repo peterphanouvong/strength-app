@@ -140,8 +140,9 @@ test.describe('F6 — PWA integrity', () => {
     // Browse-first: no session seeded → the workout opens in preview with a Start CTA.
     await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
 
+    // /complete is the save screen since phase B (spec re-aim from the old congrats layout).
     await page.goto('/complete/w1-d1');
-    await expect(page.getByRole('heading', { name: /nice\s*work/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Save workout' })).toBeVisible();
     await expect(page.getByText(/Week 1 · Lower Strength/)).toBeVisible();
   });
 

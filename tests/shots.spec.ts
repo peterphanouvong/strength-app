@@ -36,8 +36,8 @@ test.describe('shots', () => {
     await page.screenshot({ path: shot('v3-workout') });
   });
 
-  test('V4 completion', async ({ page }) => {
-    // Seed an aged session so the completion screen shows a real duration, matching
+  test('V4 completion (save screen)', async ({ page }) => {
+    // Seed an aged session so the save screen shows a real duration, matching
     // how the app behaves for a genuine workout (the flow reads elapsed from the
     // session's startedAt). Without this the stat card headlines a misleading 0:00.
     await seedStorage(page, {
@@ -48,8 +48,24 @@ test.describe('shots', () => {
     await settle(page);
     await page.getByRole('button', { name: 'Finish' }).click();
     await expect(page).toHaveURL(/\/complete\/w1-d1/);
+    await expect(page.getByRole('heading', { name: 'Save workout' })).toBeVisible();
     await settle(page, 1200);
     await page.screenshot({ path: shot('v4-completion') });
+  });
+
+  test('V10 congrats (Finish → Save → congrats)', async ({ page }) => {
+    await seedStorage(page, {
+      progress: canonicalW1D1(),
+      session: { dayId: 'w1-d1', startedAt: Date.now() - 47 * 60_000 },
+    });
+    await page.goto('/workout/w1-d1');
+    await settle(page);
+    await page.getByRole('button', { name: 'Finish' }).click();
+    await expect(page).toHaveURL(/\/complete\/w1-d1/);
+    await page.getByRole('button', { name: 'Save workout' }).click();
+    await expect(page).toHaveURL(/\/congrats\/w1-d1/);
+    await settle(page, 1200);
+    await page.screenshot({ path: shot('v10-congrats') });
   });
 
   test('V5a set type sheet', async ({ page }) => {

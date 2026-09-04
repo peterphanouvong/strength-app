@@ -7,11 +7,34 @@ import {
   requestNotifications,
 } from '../lib/feedback';
 import { useEntranceOnce } from '../lib/animation';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import {
+  coerceHistory,
+  getWeekStreak,
+  workoutDisplayTitle,
+  CompletedWorkout,
+  HISTORY_KEY,
+} from '../lib/history';
+import { MonthCalendar } from '../components/MonthCalendar';
+import { formatElapsed } from './WorkoutPage';
+
+function formatDate(t: number): string {
+  return new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
 
 export default function ProfilePage() {
   const reduceMotion = useReducedMotion();
   const entered = useEntranceOnce('profile');
   const [notifPerm, setNotifPerm] = useState(notificationPermission());
+  const [historyRaw] = useLocalStorage<CompletedWorkout[]>(HISTORY_KEY, []);
+  const history = coerceHistory(historyRaw);
+  const [monthDate, setMonthDate] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const streak = getWeekStreak(history);
+  const recentFirst = [...history].sort((a, b) => b.completedAt - a.completedAt);
 
   const rise = (delay: number) => ({
     initial: reduceMotion || !entered ? false : ({ opacity: 0, y: 16 } as const),
@@ -28,10 +51,53 @@ export default function ProfilePage() {
           <p className="text-sm text-mist mt-4">Your training and settings, all local.</p>
         </motion.header>
 
-        {/* Month calendar, streak and workout history land in phase B (vb-workout-history-v1);
-            the PR list lands in phase C (vb-personal-bests-v1). Nothing renders until real data exists. */}
+        <motion.section {...rise(0.08)}>
+          <MonthCalendar monthDate={monthDate} history={history} onNavigate={setMonthDate} />
+          {streak > 0 && (
+            <p className="text-base font-bold text-zest mt-3.5 text-center">
+              🔥 <span className="text-flame">{streak} week streak</span>
+            </p>
+          )}
+        </motion.section>
 
-        <motion.section className="border-t border-dashed border-white/25 pt-6" {...rise(0.1)}>
+        <motion.section className="mt-8" {...rise(0.14)}>
+          <h2 className="text-lg font-bold tracking-[-0.02em]">History</h2>
+          {recentFirst.length === 0 ? (
+            <p className="text-sm text-mist leading-relaxed mt-1.5">
+              No workouts saved yet — finish a session and it'll show up here.
+            </p>
+          ) : (
+            <ul
+              aria-label="Workout history"
+              className="bg-white/5 rounded-2xl divide-y divide-white/[0.06] overflow-hidden mt-3"
+            >
+              {recentFirst.map((entry) => (
+                <li key={entry.id} className="px-4 py-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="font-bold tracking-[-0.02em] min-w-0 truncate">
+                      {workoutDisplayTitle(entry)}
+                    </p>
+                    <p className="text-xs font-medium text-mist tabular-nums flex-shrink-0">
+                      {formatDate(entry.completedAt)}
+                    </p>
+                  </div>
+                  <p className="text-xs text-mist tabular-nums mt-0.5">
+                    Week {entry.weekNum} · {formatElapsed(entry.elapsed)} ·{' '}
+                    {Math.round(entry.volume).toLocaleString()} kg · {entry.setsDone}/{entry.totalSets}{' '}
+                    sets
+                  </p>
+                  {entry.note && (
+                    <p className="text-xs text-white/80 leading-relaxed mt-1">{entry.note}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </motion.section>
+
+        {/* The PR list lands in phase C (vb-personal-bests-v1). */}
+
+        <motion.section className="border-t border-dashed border-white/25 pt-6 mt-8" {...rise(0.2)}>
           <h2 className="text-lg font-bold tracking-[-0.02em]">Rest notifications</h2>
           <p className="text-sm text-mist leading-relaxed mt-1.5">
             Get an alert when a rest timer ends, even if the app is in the background.

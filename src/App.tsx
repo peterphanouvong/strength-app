@@ -5,6 +5,7 @@ import WeeksPage from './pages/WeeksPage';
 import WeekOverview from './pages/WeekOverview';
 import WorkoutPage from './pages/WorkoutPage';
 import CompletionPage from './pages/CompletionPage';
+import CongratsPage from './pages/CongratsPage';
 import ProfilePage from './pages/ProfilePage';
 import { ActiveWorkoutPill } from './components/ActiveWorkoutPill';
 import { TabBar } from './components/TabBar';
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/week/:weekNumber" element={<WeekOverview />} />
         <Route path="/workout/:id" element={<WorkoutPage />} />
         <Route path="/complete/:id" element={<CompletionPage />} />
+        <Route path="/congrats/:id" element={<CongratsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

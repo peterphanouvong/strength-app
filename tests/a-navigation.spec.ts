@@ -36,13 +36,20 @@ test.describe('A — tab bar', () => {
     }
   });
 
-  test('hidden on /workout/:id and /complete/:id (full-screen focus)', async ({ page }) => {
+  test('hidden on /workout/:id, /complete/:id and /congrats/:id (full-screen focus)', async ({
+    page,
+  }) => {
     await seedStorage(page, { session: { dayId: 'w1-d1', startedAt: Date.now() } });
     await page.goto('/workout/w1-d1');
     await expect(page.getByRole('heading', { name: 'Lower Strength' })).toBeVisible();
     await expect(tabBar(page)).toHaveCount(0);
 
+    // /complete is the save screen since phase B (spec re-aim from the old congrats layout).
     await page.goto('/complete/w1-d1');
+    await expect(page.getByRole('heading', { name: 'Save workout' })).toBeVisible();
+    await expect(tabBar(page)).toHaveCount(0);
+
+    await page.goto('/congrats/w1-d1');
     await expect(page.getByRole('heading', { name: /nice\s*work/i })).toBeVisible();
     await expect(tabBar(page)).toHaveCount(0);
   });

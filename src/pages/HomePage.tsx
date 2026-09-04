@@ -8,6 +8,7 @@ import { PROGRESS_KEY, ProgressMap, getWeekProgress } from '../lib/progress';
 import { useActiveSession } from '../lib/session';
 import { hapticSelect } from '../lib/feedback';
 import { useEntranceOnce } from '../lib/animation';
+import { coerceHistory, getWeekStreak, CompletedWorkout, HISTORY_KEY } from '../lib/history';
 import { formatElapsed } from './WorkoutPage';
 
 function greeting(): string {
@@ -22,6 +23,8 @@ export default function HomePage() {
   const reduceMotion = useReducedMotion();
   const entered = useEntranceOnce('home');
   const [completedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
+  const [historyRaw] = useLocalStorage<CompletedWorkout[]>(HISTORY_KEY, []);
+  const streak = getWeekStreak(coerceHistory(historyRaw));
   const { session, elapsed } = useActiveSession();
 
   // Resume point: the first week that still has incomplete sets.
@@ -56,6 +59,11 @@ export default function HomePage() {
             {greeting()}
           </h1>
           <p className="text-sm text-mist mt-4">Strength &amp; power for volleyball.</p>
+          {streak > 0 && (
+            <span className="inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3.5 py-2 mt-4 text-sm font-bold">
+              🔥 <span className="text-flame">{streak} week streak</span>
+            </span>
+          )}
         </motion.header>
 
         <div className="space-y-4">
@@ -117,7 +125,6 @@ export default function HomePage() {
           </motion.div>
         </div>
 
-        {/* Streak chip renders here in phase B (vb-workout-history-v1) — nothing until real data exists. */}
         {/* Recent PRs render here in phase C (vb-personal-bests-v1) — nothing until real data exists. */}
       </main>
     </div>

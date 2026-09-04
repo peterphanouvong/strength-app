@@ -164,7 +164,10 @@ test.describe('F7 — data safety', () => {
     await expect(page.getByRole('heading', { name: /12-week/ })).toBeVisible();
     await page.goto('/week/1');
     await expect(page.getByRole('heading', { name: 'Week 1' })).toBeVisible();
+    // /complete is the save screen since phase B (spec re-aim from the old congrats layout).
     await page.goto('/complete/w1-d1');
+    await expect(page.getByRole('heading', { name: 'Save workout' })).toBeVisible();
+    await page.goto('/congrats/w1-d1');
     await expect(page.getByRole('heading', { name: /Nice/ })).toBeVisible();
     await page.goto('/workout/w1-d1');
     await expect(page.getByRole('heading', { name: /Hang Power Clean/ })).toBeVisible();
