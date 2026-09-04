@@ -110,6 +110,8 @@ test.describe('F2 — rest timer lifecycle', () => {
   test('changing rest duration in the sheet persists in vb-rest-overrides-v1 and is used for the next tick', async ({
     page,
   }) => {
+    // Browse-first: rest editing belongs to a live workout, so seed a session.
+    await seedStorage(page, { session: { dayId: 'w1-d1', startedAt: Date.now() } });
     await openWorkout(page);
 
     // Open the rest sheet for Hang Power Clean (first exercise's rest chip).
@@ -132,6 +134,8 @@ test.describe('F2 — rest timer lifecycle', () => {
   });
 
   test('"Off" (0) in the sheet persists and starts no timer on the next tick', async ({ page }) => {
+    // Browse-first: rest editing belongs to a live workout, so seed a session.
+    await seedStorage(page, { session: { dayId: 'w1-d1', startedAt: Date.now() } });
     await openWorkout(page);
 
     await page.getByRole('button', { name: /^Rest timer: 3:00/ }).first().click();

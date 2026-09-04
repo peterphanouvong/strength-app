@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Check, Timer, Plus, X, History } from 'lucide-react';
+import { ChevronLeft, Check, Timer, Plus, X, History, MoreVertical } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { TRAINING_PLAN, WorkoutDay, Exercise } from '../data';
 import { cn } from '../lib/utils';
@@ -52,36 +52,61 @@ function conflictFor(dayId: string | undefined): ActiveSession | null {
   return s && s.dayId !== dayId ? s : null;
 }
 
-function useSessionTimer(dayId: string | undefined) {
+/**
+ * Browse-first session state. Opening a workout never starts a session: the page
+ * is a read-only *preview* until `begin()` goes live — via the Start CTA or the
+ * tap-a-set convenience. A conflicting session (another day's workout running)
+ * is only surfaced at that moment, never on open.
+ */
+function useWorkoutSession(dayId: string | undefined) {
+  const [live, setLive] = useState(() => !!dayId && getActiveSession()?.dayId === dayId);
   const [elapsed, setElapsed] = useState(0);
-  // Another day's session already running → the user must resolve it first.
-  const [conflict, setConflict] = useState<ActiveSession | null>(() => conflictFor(dayId));
+  // Another day's session, set when the user attempts to start this one.
+  const [conflict, setConflict] = useState<ActiveSession | null>(null);
 
   // The route param can change without remounting (e.g. "Go back to that workout"
-  // navigates /workout/w1-d2 → /workout/w1-d1). Re-derive the conflict synchronously
-  // during render so the stale sheet never blocks the resumed workout.
+  // navigates /workout/w1-d2 → /workout/w1-d1). Re-derive the mode synchronously
+  // during render so a stale sheet or mode never blocks the resumed workout.
   const [prevDayId, setPrevDayId] = useState(dayId);
   if (dayId !== prevDayId) {
     setPrevDayId(dayId);
-    setConflict(conflictFor(dayId));
+    setLive(!!dayId && getActiveSession()?.dayId === dayId);
+    setConflict(null);
+    setElapsed(0);
   }
 
   useEffect(() => {
-    if (!dayId || conflict) return;
-    let session = getActiveSession();
-    if (!session || session.dayId !== dayId) {
-      session = startSession(dayId);
-    }
+    if (!dayId || !live) return;
+    const session = getActiveSession();
+    if (!session || session.dayId !== dayId) return;
     const startedAt = session.startedAt;
     const tick = () => setElapsed(Math.floor((Date.now() - startedAt) / 1000));
     tick();
     const interval = window.setInterval(tick, 1000);
     return () => window.clearInterval(interval);
-  }, [dayId, conflict]);
+  }, [dayId, live]);
 
+  /**
+   * Go live: resume this day's session or start a fresh one. Returns false —
+   * raising the conflict sheet instead — when another day's workout is running.
+   */
+  const begin = (): boolean => {
+    if (!dayId) return false;
+    const other = conflictFor(dayId);
+    if (other) {
+      setConflict(other);
+      return false;
+    }
+    if (getActiveSession()?.dayId !== dayId) startSession(dayId);
+    setLive(true);
+    return true;
+  };
+
+  // Conflict resolution: overwrite the other day's session with this one's.
   const takeOver = () => {
     if (dayId) startSession(dayId);
     setConflict(null);
+    setLive(true);
   };
 
   // Only end the session this page owns — if another tab took over (the session
@@ -90,7 +115,7 @@ function useSessionTimer(dayId: string | undefined) {
     if (dayId) endSession(dayId);
   };
 
-  return { elapsed, clear, conflict, takeOver };
+  return { live, elapsed, begin, clear, conflict, dismissConflict: () => setConflict(null), takeOver };
 }
 
 export function formatElapsed(seconds: number): string {
@@ -124,7 +149,9 @@ export default function WorkoutPage() {
   const entered = useEntranceOnce('workout');
   const [completedSets, setCompletedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
   const [restOverrides, setRestOverrides] = useLocalStorage<Record<string, number>>(REST_OVERRIDES_KEY, {});
-  const { elapsed, clear, conflict, takeOver } = useSessionTimer(day ? id : undefined);
+  const { live, elapsed, begin, clear, conflict, dismissConflict, takeOver } = useWorkoutSession(
+    day ? id : undefined
+  );
 
   // Rest countdown lives in a module-level store (src/lib/rest.ts) so it — and
   // its expiry feedback — survives this page unmounting on in-app navigation.
@@ -135,12 +162,14 @@ export default function WorkoutPage() {
   const [historyTarget, setHistoryTarget] = useState<Exercise | null>(null);
   const [justCompleted, setJustCompleted] = useState<string | null>(null);
   const [notifPerm, setNotifPerm] = useState(notificationPermission());
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   if (!day) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
         <p className="text-mist">Workout not found.</p>
-        <button onClick={() => navigate('/')} className="text-white font-bold underline">
+        <button onClick={() => navigate('/programme')} className="text-white font-bold underline">
           Back to programme
         </button>
       </div>
@@ -152,9 +181,47 @@ export default function WorkoutPage() {
 
   const restFor = (exercise: Exercise) => restOverrides[exercise.name] ?? exercise.restSec;
 
-  const finishWorkout = () => {
+  /** Remove every logged entry for a day from the progress map (discard semantics). */
+  const clearDayProgress = (targetDayId: string) => {
+    setCompletedSets((prev) => {
+      const next: ProgressMap = {};
+      for (const [key, log] of Object.entries(prev)) {
+        if (!key.startsWith(`${targetDayId}-`)) next[key] = log;
+      }
+      return next;
+    });
+  };
+
+  const closeCancelSheet = () => {
+    setCancelOpen(false);
+    setConfirmDiscard(false);
+  };
+
+  const endKeepingSets = () => {
+    hapticSelect();
     clear();
+    closeCancelSheet();
+    navigate(`/week/${weekNum}`);
+  };
+
+  const discardWorkout = () => {
+    hapticSelect();
+    clear();
+    clearDayProgress(day!.id);
+    closeCancelSheet();
+    navigate(`/week/${weekNum}`);
+  };
+
+  const startWorkout = () => {
+    hapticSelect();
+    unlockAudio();
+    begin();
+  };
+
+  const finishWorkout = () => {
     if (progress.completed === 0) {
+      // Nothing logged — nothing to save. End the empty session and step back out.
+      clear();
       hapticTap();
       navigate(`/week/${weekNum}`);
       return;
@@ -162,6 +229,8 @@ export default function WorkoutPage() {
     unlockAudio();
     hapticWorkoutDone();
     playWorkoutDone();
+    // The session deliberately stays alive through Finish — it ends on the
+    // completion screen's Save/Done, so backing out of that screen is lossless.
     navigate(`/complete/${day!.id}`, {
       state: {
         elapsed,
@@ -175,6 +244,9 @@ export default function WorkoutPage() {
   };
 
   const toggleSet = (exercise: Exercise, setIndex: number) => {
+    // Preview convenience: tapping a set's check both starts the session and logs
+    // the set. A conflicting session raises the sheet instead — nothing is logged.
+    if (!live && !begin()) return;
     const key = `${exercise.id}-${setIndex}`;
     const wasCompleted = completedSets[key]?.completed ?? false;
     unlockAudio();
@@ -273,12 +345,30 @@ export default function WorkoutPage() {
               Week {weekNum} · Day {day.title.split(':')[0].replace('Day ', '')}
             </p>
           </div>
-          <button
-            onClick={finishWorkout}
-            className="flex-shrink-0 bg-mint text-court-deep font-bold text-sm px-5 py-2.5 rounded-full transition-transform active:scale-95"
-          >
-            Finish
-          </button>
+          {live ? (
+            <>
+              <button
+                onClick={finishWorkout}
+                className="flex-shrink-0 bg-mint text-court-deep font-bold text-sm px-5 py-2.5 rounded-full transition-transform active:scale-95"
+              >
+                Finish
+              </button>
+              <button
+                onClick={() => {
+                  hapticTap();
+                  setCancelOpen(true);
+                }}
+                aria-label="Workout options"
+                className="w-10 h-10 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
+            </>
+          ) : (
+            <span className="flex-shrink-0 bg-white/10 text-mist font-bold text-xs px-3.5 py-2 rounded-full">
+              Preview
+            </span>
+          )}
         </div>
         {/* header progress bar */}
         <div className="h-1.5 bg-court-deep">
@@ -297,7 +387,7 @@ export default function WorkoutPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
         >
-          <Stat label="Duration" value={formatElapsed(elapsed)} accent="text-mint" />
+          <Stat label="Duration" value={live ? formatElapsed(elapsed) : '—'} accent="text-mint" />
           <Stat label="Volume" value={`${Math.round(volume).toLocaleString()} kg`} pop />
           <Stat label="Sets" value={`${progress.completed}/${progress.total}`} pop />
         </motion.div>
@@ -314,6 +404,7 @@ export default function WorkoutPage() {
                 exercise={exercise}
                 index={index}
                 weekNum={weekNum}
+                live={live}
                 restSec={restFor(exercise)}
                 completedSets={completedSets}
                 justCompleted={justCompleted}
@@ -329,9 +420,31 @@ export default function WorkoutPage() {
         </div>
       </main>
 
+      {/* Preview: sticky start CTA */}
+      <AnimatePresence>
+        {!live && (
+          <motion.div
+            className="fixed bottom-4 inset-x-4 z-30"
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+          >
+            <div className="max-w-xl mx-auto">
+              <button
+                onClick={startWorkout}
+                className="w-full bg-mint text-court-deep font-bold text-base py-4 rounded-full shadow-xl transition-transform active:scale-[0.98]"
+              >
+                Start workout
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Rest countdown bar */}
       <AnimatePresence>
-        {rest && (
+        {live && rest && (
           <motion.div
             className="fixed bottom-4 inset-x-4 z-30"
             initial={{ y: 80, opacity: 0 }}
@@ -490,12 +603,46 @@ export default function WorkoutPage() {
         {historyTarget && <ExerciseHistory exercise={historyTarget} completedSets={completedSets} />}
       </BottomSheet>
 
-      {/* Another workout in progress */}
-      <BottomSheet
-        open={conflict !== null}
-        onClose={() => navigate(`/week/${weekNum}`)}
-        title="Workout in progress"
-      >
+      {/* Cancel / end the live workout */}
+      <BottomSheet open={cancelOpen} onClose={closeCancelSheet} title="End workout">
+        <p className="text-sm text-mist leading-relaxed mb-5">
+          {progress.completed > 0
+            ? `You've logged ${progress.completed} of ${progress.total} sets. Keep them and pick this workout up later, or discard them.`
+            : 'Nothing logged yet — ending now just stops the timer.'}
+        </p>
+        <button
+          onClick={endKeepingSets}
+          className="w-full bg-mint text-court-deep font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
+        >
+          End workout, keep sets
+        </button>
+        {confirmDiscard ? (
+          <div className="mt-2 bg-flame/10 rounded-xl px-4 py-3.5">
+            <p className="text-sm font-bold text-flame text-center mb-3">
+              This clears {progress.completed} logged {progress.completed === 1 ? 'set' : 'sets'}.
+            </p>
+            <button
+              onClick={discardWorkout}
+              className="w-full bg-flame text-white font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
+            >
+              Yes, discard
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              hapticTap();
+              setConfirmDiscard(true);
+            }}
+            className="w-full bg-white/10 hover:bg-white/20 text-flame font-bold text-sm py-3.5 rounded-xl mt-2 transition-colors"
+          >
+            Discard workout
+          </button>
+        )}
+      </BottomSheet>
+
+      {/* Another workout in progress (raised on Start, never on open) */}
+      <BottomSheet open={conflict !== null} onClose={dismissConflict} title="Workout in progress">
         {conflict && (
           <ConflictContent
             conflict={conflict}
@@ -505,6 +652,11 @@ export default function WorkoutPage() {
             }}
             onTakeOver={() => {
               hapticSelect();
+              takeOver();
+            }}
+            onDiscardOther={() => {
+              hapticSelect();
+              clearDayProgress(conflict.dayId);
               takeOver();
             }}
           />
@@ -518,7 +670,8 @@ const ConflictContent: React.FC<{
   conflict: ActiveSession;
   onResume: () => void;
   onTakeOver: () => void;
-}> = ({ conflict, onResume, onTakeOver }) => {
+  onDiscardOther: () => void;
+}> = ({ conflict, onResume, onTakeOver, onDiscardOther }) => {
   let title = 'Another workout';
   for (const week of TRAINING_PLAN) {
     const found = week.days.find((d) => d.id === conflict.dayId);
@@ -546,6 +699,12 @@ const ConflictContent: React.FC<{
         className="w-full bg-white/10 hover:bg-white/20 font-bold text-sm py-3.5 rounded-xl mt-2 transition-colors"
       >
         End it and start this one
+      </button>
+      <button
+        onClick={onDiscardOther}
+        className="w-full bg-white/10 hover:bg-white/20 text-flame font-bold text-sm py-3.5 rounded-xl mt-2 transition-colors"
+      >
+        Discard the other workout
       </button>
     </div>
   );
@@ -710,6 +869,7 @@ const ExerciseSection: React.FC<{
   exercise: Exercise;
   index: number;
   weekNum: number;
+  live: boolean;
   restSec: number;
   completedSets: ProgressMap;
   justCompleted: string | null;
@@ -723,6 +883,7 @@ const ExerciseSection: React.FC<{
   exercise,
   index,
   weekNum,
+  live,
   restSec,
   completedSets,
   justCompleted,
@@ -765,13 +926,14 @@ const ExerciseSection: React.FC<{
       {exercise.load && <p className="text-sm font-bold text-zest mb-1">{exercise.load}</p>}
       {exercise.notes && <p className="text-sm text-mist leading-relaxed mb-1">{exercise.notes}</p>}
 
-      {/* Rest timer config */}
+      {/* Rest timer config (read-only in preview — editing belongs to a live workout) */}
       <button
         onClick={() => {
           hapticTap();
           onConfigureRest();
         }}
-        className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/15 rounded-full pl-2.5 pr-3 py-1.5 mt-1.5 text-[0.8125rem] font-bold text-mint tabular-nums transition-colors"
+        disabled={!live}
+        className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/15 rounded-full pl-2.5 pr-3 py-1.5 mt-1.5 text-[0.8125rem] font-bold text-mint tabular-nums transition-colors disabled:opacity-60 disabled:hover:bg-white/10"
       >
         <Timer className="w-3.5 h-3.5" />
         Rest timer: {restSec === 0 ? 'Off' : formatElapsed(restSec)}
@@ -801,8 +963,10 @@ const ExerciseSection: React.FC<{
           const inputClass = cn(
             'w-full text-center rounded-lg py-2.5 text-sm font-bold tabular-nums text-white',
             'bg-white/10 focus:outline-none focus:ring-2 focus:ring-mint',
-            log.completed && 'bg-transparent'
+            log.completed && 'bg-transparent',
+            !live && 'opacity-60'
           );
+          const inputsDisabled = log.completed || !live;
 
           return (
             <div
@@ -817,6 +981,7 @@ const ExerciseSection: React.FC<{
                   hapticTap();
                   onPickSetType(setIndex);
                 }}
+                disabled={!live}
                 aria-label="Change set type"
                 className={cn(
                   'col-span-1 text-center font-bold tabular-nums py-1 rounded-md hover:bg-white/10 transition-colors',
@@ -845,7 +1010,7 @@ const ExerciseSection: React.FC<{
                       placeholder={prevLog?.weight || '—'}
                       value={log.weight || ''}
                       onChange={(e) => updateSetLog(exercise.id, setIndex, 'weight', e.target.value)}
-                      disabled={log.completed}
+                      disabled={inputsDisabled}
                       className={inputClass}
                     />
                   </div>
@@ -856,7 +1021,7 @@ const ExerciseSection: React.FC<{
                       placeholder={prevLog?.actualReps || repsPlaceholder(exercise.reps) || '—'}
                       value={log.actualReps || ''}
                       onChange={(e) => updateSetLog(exercise.id, setIndex, 'actualReps', e.target.value)}
-                      disabled={log.completed}
+                      disabled={inputsDisabled}
                       className={inputClass}
                     />
                   </div>
@@ -871,7 +1036,7 @@ const ExerciseSection: React.FC<{
                     placeholder={prevLog?.actualReps || repsPlaceholder(exercise.reps) || '—'}
                     value={log.actualReps || ''}
                     onChange={(e) => updateSetLog(exercise.id, setIndex, 'actualReps', e.target.value)}
-                    disabled={log.completed}
+                    disabled={inputsDisabled}
                     className={inputClass}
                   />
                 </div>
@@ -885,7 +1050,7 @@ const ExerciseSection: React.FC<{
                     placeholder={prevLog?.timeSec || '—'}
                     value={log.timeSec || ''}
                     onChange={(e) => updateSetLog(exercise.id, setIndex, 'timeSec', e.target.value)}
-                    disabled={log.completed}
+                    disabled={inputsDisabled}
                     className={inputClass}
                   />
                 </div>

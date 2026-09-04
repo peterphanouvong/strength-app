@@ -125,6 +125,11 @@ test.describe('F6 — PWA integrity', () => {
     // Each goto is a full document request; offline it must be served by the SW's
     // navigation fallback (app shell), not the browser error page.
     await page.goto('/');
+    await expect(
+      page.getByRole('heading', { name: /Good (morning|afternoon|evening)/ })
+    ).toBeVisible();
+
+    await page.goto('/programme');
     await expect(page.getByRole('heading', { name: /12-week/i })).toBeVisible();
 
     await page.goto('/week/1');
@@ -132,7 +137,8 @@ test.describe('F6 — PWA integrity', () => {
 
     await page.goto('/workout/w1-d1');
     await expect(page.getByText('Hang Power Clean')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Finish' })).toBeVisible();
+    // Browse-first: no session seeded → the workout opens in preview with a Start CTA.
+    await expect(page.getByRole('button', { name: 'Start workout' })).toBeVisible();
 
     await page.goto('/complete/w1-d1');
     await expect(page.getByRole('heading', { name: /nice\s*work/i })).toBeVisible();
@@ -149,7 +155,9 @@ test.describe('F6 — PWA integrity', () => {
     // Full reload offline: the render-blocking Google Fonts stylesheet now fails.
     // The app shell must come from the SW and paint real content with a fallback font.
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /12-week/i })).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByRole('heading', { name: /Good (morning|afternoon|evening)/ })
+    ).toBeVisible({ timeout: 10_000 });
 
     // Not a blank shell: the root actually has rendered content.
     const textLength = await page.evaluate(

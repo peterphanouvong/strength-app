@@ -23,7 +23,7 @@ test.describe('Q1 — invalid workout id does not start a phantom session', () =
     expect(session).toBeNull();
   });
 
-  test('after visiting a bogus id, a real workout opens with no conflict sheet and starts its own session', async ({
+  test('after visiting a bogus id, a real workout opens with no conflict sheet and Start begins its own session', async ({
     page,
   }) => {
     await page.goto('/workout/nope-not-a-day');
@@ -35,7 +35,10 @@ test.describe('Q1 — invalid workout id does not start a phantom session', () =
     await expect(page.getByRole('heading', { name: 'Lower Strength' })).toBeVisible();
     await expect(conflictSheet(page)).toHaveCount(0);
 
-    // The session now running belongs to the real day, never the bogus id.
+    // Browse-first: going live never trips over phantom state from the bogus id —
+    // the session started belongs to the real day, never the bogus one.
+    await page.getByRole('button', { name: 'Start workout' }).click();
+    await expect(conflictSheet(page)).toHaveCount(0);
     await expect
       .poll(async () => (await readStorage<Session>(page, SESSION_KEY))?.dayId)
       .toBe('w1-d1');
@@ -55,6 +58,8 @@ test.describe('Q1 — closing bottom sheet is not clickable mid-exit', () => {
     await seedStorage(page, { session: { dayId: 'w1-d1', startedAt: Date.now() - 12 * 60_000 } });
     await page.goto('/workout/w1-d2');
 
+    // Conflicts moved to the Start action (browse-first): raise the sheet first.
+    await page.getByRole('button', { name: 'Start workout' }).click();
     const sheet = page.getByRole('dialog', { name: 'Workout in progress' });
     await expect(sheet).toBeVisible();
 
@@ -91,16 +96,18 @@ test.describe('Q1 — stale tab Finish does not delete another tab’s session',
     page,
     context,
   }) => {
-    // Tab A starts w1-d1 — a session for it lands in storage.
+    // Tab A starts w1-d1 (browse-first: via the Start CTA) — a session lands in storage.
     const tabA = page;
     await tabA.goto('/workout/w1-d1');
+    await tabA.getByRole('button', { name: 'Start workout' }).click();
     await expect
       .poll(async () => (await readStorage<Session>(tabA, SESSION_KEY))?.dayId)
       .toBe('w1-d1');
 
-    // Tab B opens w1-d2, gets the conflict sheet, and takes over.
+    // Tab B opens w1-d2, taps Start, gets the conflict sheet, and takes over.
     const tabB = await context.newPage();
     await tabB.goto('/workout/w1-d2');
+    await tabB.getByRole('button', { name: 'Start workout' }).click();
     await expect(conflictSheet(tabB)).toBeVisible();
     await tabB.getByRole('button', { name: 'End it and start this one' }).click();
     await expect
@@ -177,7 +184,7 @@ test.describe('Q1 — second tab does not clobber first tab’s logged sets', ()
     const exerciseSection = (p: Page, name: string) =>
       p.locator('main section').filter({ has: p.getByRole('heading', { name: new RegExp(name) }) });
 
-    // Both tabs open on the same workout before either writes anything.
+    // Both tabs open on the same workout before either writes any progress.
     const tabA = page;
     await tabA.goto('/workout/w1-d1');
     await expect(tabA.getByRole('heading', { name: /Hang Power Clean/ })).toBeVisible();
@@ -186,7 +193,9 @@ test.describe('Q1 — second tab does not clobber first tab’s logged sets', ()
     await tabB.goto('/workout/w1-d1');
     await expect(tabB.getByRole('heading', { name: /Hang Power Clean/ })).toBeVisible();
 
-    // Tab A: 60 kg on Hang Power Clean set 1, then tick it.
+    // Tab A goes live (browse-first: inputs are read-only in preview), then logs
+    // 60 kg on Hang Power Clean set 1. Tab B still holds its empty mount snapshot.
+    await tabA.getByRole('button', { name: 'Start workout' }).click();
     const hpcA = exerciseSection(tabA, 'Hang Power Clean');
     await hpcA.locator('input[inputmode="decimal"]').first().fill('60');
     await hpcA.getByRole('button', { name: 'Mark set complete' }).first().click();
@@ -298,9 +307,10 @@ test.describe('Q1 — unknown /complete/:id shows not-found, not a broken header
     await expect(page.getByRole('button', { name: 'Done' })).toHaveCount(0);
     await expect(page.getByText('Duration')).toHaveCount(0);
 
-    // The escape hatch goes home, not to the silent /week/1 fallback.
+    // The escape hatch goes to the programme (weeks browser lives at /programme
+    // since the consumer-flows route moves), not to the silent /week/1 fallback.
     await page.getByRole('button', { name: 'Back to programme' }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/programme$/);
   });
 
   test('a valid direct visit to /complete/w1-d1 still renders its real header', async ({ page }) => {

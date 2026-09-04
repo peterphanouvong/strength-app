@@ -5,6 +5,7 @@ import { Share } from 'lucide-react';
 import { TRAINING_PLAN } from '../data';
 import { formatElapsed } from './WorkoutPage';
 import { hapticTap, hapticSelect } from '../lib/feedback';
+import { endSession } from '../lib/session';
 import { shareWorkout } from '../lib/share';
 
 type CompletionState = {
@@ -74,7 +75,7 @@ export default function CompletionPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
         <p className="text-mist">Workout not found.</p>
-        <button onClick={() => navigate('/')} className="text-white font-bold underline">
+        <button onClick={() => navigate('/programme')} className="text-white font-bold underline">
           Back to programme
         </button>
       </div>
@@ -168,6 +169,9 @@ export default function CompletionPage() {
         <motion.button
           onClick={() => {
             hapticTap();
+            // The session survives Finish so backing out is lossless — it ends
+            // here, when the user actually leaves the completion flow.
+            if (id) endSession(id);
             navigate(`/week/${weekNum ?? 1}`);
           }}
           className="mt-3 w-full bg-white/10 text-white font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
@@ -179,7 +183,8 @@ export default function CompletionPage() {
         <motion.button
           onClick={() => {
             hapticTap();
-            navigate('/');
+            if (id) endSession(id);
+            navigate('/programme');
           }}
           className="mt-4 w-full text-mist font-bold text-sm py-2"
           {...rise(0.5)}

@@ -87,15 +87,16 @@ test.describe('F1 — full workout flow', () => {
     expect(m).toBeLessThanOrEqual(10);
   });
 
-  test('after Finish: vb-active-session-v1 is removed and progress key contains 15 entries with completed: true', async ({
+  test('Finish keeps the session alive (it ends at the completion screen\'s Done); progress key contains 15 entries with completed: true', async ({
     page,
   }) => {
     await runFullWorkoutFlow(page);
     await expect(page).toHaveURL(/\/complete\/w1-d1$/);
 
-    // Session key removed
-    const session = await readStorage(page, SESSION_KEY);
-    expect(session).toBeNull();
+    // Spec change (2026-09-05 consumer flows): the session survives Finish so
+    // backing out of the completion screen is lossless — it ends on Done/Save.
+    const session = await readStorage<{ dayId: string; startedAt: number }>(page, SESSION_KEY);
+    expect(session?.dayId).toBe('w1-d1');
 
     // Progress key: exactly the 15 canonical entries, all completed: true
     const progress = await readStorage<Record<string, SetLog>>(page, PROGRESS_KEY);
@@ -110,6 +111,11 @@ test.describe('F1 — full workout flow', () => {
     expect(progress!['w1-d1-e1-0']).toMatchObject({ completed: true, weight: '60', actualReps: '3' });
     expect(progress!['w1-d1-e2-3']).toMatchObject({ completed: true, weight: '80', actualReps: '6' });
     expect(progress!['w1-d1-e4-2']).toMatchObject({ completed: true, actualReps: '10' });
+
+    // Done leaves the completion flow: only now is vb-active-session-v1 removed.
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(page).toHaveURL(/\/week\/1$/);
+    expect(await readStorage(page, SESSION_KEY)).toBeNull();
   });
 
   test('finishing with 0 sets ticked navigates back to the week — no completion screen, no session left behind', async ({
@@ -118,6 +124,8 @@ test.describe('F1 — full workout flow', () => {
     await page.goto('/workout/w1-d1');
     await expect(page.getByRole('heading', { name: /Hang Power Clean/ })).toBeVisible();
 
+    // Browse-first: the page opens in preview, so go live before finishing.
+    await page.getByRole('button', { name: 'Start workout' }).click();
     await page.getByRole('button', { name: 'Finish' }).click();
 
     // Back on the week, not the completion screen
