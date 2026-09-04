@@ -71,7 +71,9 @@ enables browsing). Two modes:
 - **Live** (session exists for this day): exactly today's behavior. Tapping Start switches modes
   by calling `startSession(dayId)`. Convenience: in preview, tapping a set's check both starts the
   session and logs that set (one-tap flow preserved for people who just start lifting).
-- Session conflict logic unchanged, but the conflict sheet gains a third action:
+- Session conflict moves to the **Start** action (and the set-tap-start convenience): browsing
+  another day while a workout runs never raises the sheet — only attempting to START it does.
+  The conflict sheet gains a third action:
   **"Discard the other workout"** (ends it AND clears its logged sets for that day, then starts
   this one). Existing two actions unchanged.
 
