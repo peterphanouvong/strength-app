@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
+import { Medal } from 'lucide-react';
 import {
   hapticTap,
   notificationsSupported,
@@ -15,6 +16,7 @@ import {
   CompletedWorkout,
   HISTORY_KEY,
 } from '../lib/history';
+import { getBests, listPrs } from '../lib/bests';
 import { MonthCalendar } from '../components/MonthCalendar';
 import { formatElapsed } from './WorkoutPage';
 
@@ -35,6 +37,7 @@ export default function ProfilePage() {
 
   const streak = getWeekStreak(history);
   const recentFirst = [...history].sort((a, b) => b.completedAt - a.completedAt);
+  const [prs] = useState(() => listPrs(getBests()));
 
   const rise = (delay: number) => ({
     initial: reduceMotion || !entered ? false : ({ opacity: 0, y: 16 } as const),
@@ -95,7 +98,25 @@ export default function ProfilePage() {
           )}
         </motion.section>
 
-        {/* The PR list lands in phase C (vb-personal-bests-v1). */}
+        {prs.length > 0 && (
+          <motion.section className="mt-8" {...rise(0.18)}>
+            <h2 className="text-lg font-bold tracking-[-0.02em]">Personal bests</h2>
+            <ul
+              aria-label="Personal bests"
+              className="bg-white/5 rounded-2xl divide-y divide-white/[0.06] overflow-hidden mt-3"
+            >
+              {prs.map((pr) => (
+                <li key={`${pr.exercise}-${pr.label}`} className="flex items-center gap-3 px-4 py-3">
+                  <Medal className="w-4 h-4 text-zest flex-shrink-0" />
+                  <p className="font-bold tracking-[-0.02em] text-sm min-w-0 truncate flex-1">
+                    {pr.exercise}
+                  </p>
+                  <p className="text-sm font-bold text-zest tabular-nums flex-shrink-0">{pr.label}</p>
+                </li>
+              ))}
+            </ul>
+          </motion.section>
+        )}
 
         <motion.section className="border-t border-dashed border-white/25 pt-6 mt-8" {...rise(0.2)}>
           <h2 className="text-lg font-bold tracking-[-0.02em]">Rest notifications</h2>

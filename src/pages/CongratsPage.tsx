@@ -6,9 +6,10 @@ import { TRAINING_PLAN, WorkoutDay } from '../data';
 import { formatElapsed } from './WorkoutPage';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { hapticTap, hapticSelect } from '../lib/feedback';
-import { shareWorkout } from '../lib/share';
+import { renderShareCard, shareImage, downloadImage } from '../lib/share';
 import { coerceHistory, getWeekStreak, CompletedWorkout, HISTORY_KEY } from '../lib/history';
 import { MonthCalendar } from '../components/MonthCalendar';
+import { BottomSheet } from '../components/BottomSheet';
 
 type CongratsState = {
   elapsed: number;
@@ -65,7 +66,9 @@ export default function CongratsPage() {
 
   const [historyRaw] = useLocalStorage<CompletedWorkout[]>(HISTORY_KEY, []);
   const history = coerceHistory(historyRaw);
-  const [shareState, setShareState] = useState<'idle' | 'busy' | 'saved'>('idle');
+  const [shareBusy, setShareBusy] = useState(false);
+  // The rendered card, previewed in a sheet before anything is shared/downloaded.
+  const [preview, setPreview] = useState<{ url: string; blob: Blob } | null>(null);
 
   let day: WorkoutDay | undefined;
   let weekNum = 1;
@@ -111,22 +114,44 @@ export default function CongratsPage() {
   const copy = congratsCopy(history.length, streak);
   const now = new Date();
 
-  const handleShare = async () => {
-    if (!state || shareState === 'busy') return;
+  // Share now opens a preview of the card; nothing is shared or downloaded
+  // until the user picks an action inside the sheet.
+  const openPreview = async () => {
+    if (!state || shareBusy || preview) return;
     hapticSelect();
-    setShareState('busy');
+    setShareBusy(true);
     try {
-      const result = await shareWorkout({
+      const blob = await renderShareCard({
         dayName,
         weekNum,
         duration: formatElapsed(state.elapsed),
         volume: `${Math.round(state.volume).toLocaleString()} kg`,
         sets: `${state.setsDone}/${state.totalSets}`,
       });
-      setShareState(result === 'downloaded' ? 'saved' : 'idle');
+      setPreview({ url: URL.createObjectURL(blob), blob });
     } catch {
-      setShareState('idle');
+      // canvas export failed — leave the button usable
     }
+    setShareBusy(false);
+  };
+
+  const closePreview = () => {
+    if (preview) URL.revokeObjectURL(preview.url);
+    setPreview(null);
+  };
+
+  const sharePreview = async () => {
+    if (!preview) return;
+    hapticSelect();
+    const result = await shareImage(preview.blob, weekNum);
+    if (result !== 'cancelled') closePreview(); // dismissed the OS sheet → keep the preview up
+  };
+
+  const savePreviewImage = () => {
+    if (!preview) return;
+    hapticSelect();
+    downloadImage(preview.blob, weekNum);
+    closePreview();
   };
 
   const rise = (delay: number) => ({
@@ -194,12 +219,12 @@ export default function CongratsPage() {
 
         {state && (
           <motion.button
-            onClick={handleShare}
+            onClick={openPreview}
             className="mt-7 w-full bg-mint text-court-deep font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98] flex items-center justify-center gap-2"
             {...rise(0.38)}
           >
             <Share className="w-5 h-5" />
-            {shareState === 'busy' ? 'Preparing…' : shareState === 'saved' ? 'Image saved' : 'Share'}
+            {shareBusy ? 'Preparing…' : 'Share'}
           </motion.button>
         )}
 
@@ -214,6 +239,40 @@ export default function CongratsPage() {
           Done
         </motion.button>
       </main>
+
+      {/* Share preview — see the card before it goes anywhere */}
+      <BottomSheet open={preview !== null} onClose={closePreview} title="Share workout">
+        {preview && (
+          <div>
+            <img
+              src={preview.url}
+              alt="Share card preview"
+              className="max-h-[42vh] mx-auto rounded-2xl border border-white/15"
+            />
+            <button
+              onClick={sharePreview}
+              className="w-full bg-mint text-court-deep font-bold text-sm py-3.5 rounded-xl mt-5 transition-transform active:scale-[0.98]"
+            >
+              Share
+            </button>
+            <button
+              onClick={savePreviewImage}
+              className="w-full bg-white/10 hover:bg-white/20 font-bold text-sm py-3.5 rounded-xl mt-2 transition-colors"
+            >
+              Save image
+            </button>
+            <button
+              onClick={() => {
+                hapticTap();
+                closePreview();
+              }}
+              className="w-full text-mist font-bold text-sm py-3 mt-1"
+            >
+              Close
+            </button>
+          </div>
+        )}
+      </BottomSheet>
     </div>
   );
 }

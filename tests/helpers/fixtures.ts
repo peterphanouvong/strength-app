@@ -4,8 +4,9 @@ import type { Page } from '@playwright/test';
 export const PROGRESS_KEY = 'volleyball-workout-progress-v3';
 export const SESSION_KEY = 'vb-active-session-v1';
 export const REST_KEY = 'vb-rest-overrides-v1';
-// Additive key (2026-09-05 consumer-flows spec) — saved workout history.
+// Additive keys (2026-09-05 consumer-flows spec) — saved workout history + personal bests.
 export const HISTORY_KEY = 'vb-workout-history-v1';
+export const BESTS_KEY = 'vb-personal-bests-v1';
 
 export type SetLog = {
   completed: boolean;
@@ -29,6 +30,11 @@ export type CompletedWorkout = {
   title?: string;
 };
 
+export type PersonalBest = {
+  bestWeight?: { weight: number; reps: number; dayId: string; at: number };
+  bestReps?: { reps: number; dayId: string; at: number };
+};
+
 /** Seed localStorage before the app boots. Call before page.goto(). */
 export async function seedStorage(
   page: Page,
@@ -37,21 +43,24 @@ export async function seedStorage(
     session?: { dayId: string; startedAt: number } | null;
     rest?: Record<string, number>;
     history?: CompletedWorkout[];
+    bests?: Record<string, PersonalBest>;
   }
 ) {
   await page.addInitScript(
-    ({ progress, session, rest, history, keys }) => {
+    ({ progress, session, rest, history, bests, keys }) => {
       if (progress) window.localStorage.setItem(keys.p, JSON.stringify(progress));
       if (session) window.localStorage.setItem(keys.s, JSON.stringify(session));
       if (rest) window.localStorage.setItem(keys.r, JSON.stringify(rest));
       if (history) window.localStorage.setItem(keys.h, JSON.stringify(history));
+      if (bests) window.localStorage.setItem(keys.b, JSON.stringify(bests));
     },
     {
       progress: data.progress,
       session: data.session,
       rest: data.rest,
       history: data.history,
-      keys: { p: PROGRESS_KEY, s: SESSION_KEY, r: REST_KEY, h: HISTORY_KEY },
+      bests: data.bests,
+      keys: { p: PROGRESS_KEY, s: SESSION_KEY, r: REST_KEY, h: HISTORY_KEY, b: BESTS_KEY },
     }
   );
 }
@@ -168,4 +177,27 @@ export function completedWorkout(weeksAgo: number, overrides: Partial<CompletedW
 /** History with one saved workout in each listed week (0 = current week, 1 = last week …). */
 export function historyForWeeks(weeksAgo: number[]): CompletedWorkout[] {
   return weeksAgo.map((w) => completedWorkout(w));
+}
+
+// ---------- vb-personal-bests-v1 seed helpers (phase C) ----------
+
+/** A seeded Back Squat weight best (defaults: 90 kg × 6, set a week ago in w3-d1). */
+export function seededSquatBest(weight = 90, reps = 6): Record<string, PersonalBest> {
+  return { 'Back Squat': { bestWeight: { weight, reps, dayId: 'w3-d1', at: Date.now() - 7 * 86_400_000 } } };
+}
+
+/** A seeded reps-tracked best for Hanging Knee Raise (default 12 reps, a week ago). */
+export function seededKneeRaiseBest(reps = 12): Record<string, PersonalBest> {
+  return { 'Hanging Knee Raise': { bestReps: { reps, dayId: 'w3-d1', at: Date.now() - 7 * 86_400_000 } } };
+}
+
+/** Four bests with staggered `at` timestamps — Back Squat newest, Hang Power Clean oldest. */
+export function seededBests(): Record<string, PersonalBest> {
+  const daysAgo = (n: number) => Date.now() - n * 86_400_000;
+  return {
+    'Hang Power Clean': { bestWeight: { weight: 62.5, reps: 3, dayId: 'w2-d1', at: daysAgo(20) } },
+    'Pull-Ups': { bestReps: { reps: 12, dayId: 'w2-d2', at: daysAgo(9) } },
+    'Bench Press': { bestWeight: { weight: 60, reps: 6, dayId: 'w2-d2', at: daysAgo(5) } },
+    'Back Squat': { bestWeight: { weight: 90, reps: 6, dayId: 'w3-d1', at: daysAgo(2) } },
+  };
 }

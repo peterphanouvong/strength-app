@@ -9,6 +9,7 @@ import { PROGRESS_KEY, ProgressMap, getDayProgress, getDayVolume } from '../lib/
 import { hapticTap, hapticSelect } from '../lib/feedback';
 import { endSession, getActiveSession } from '../lib/session';
 import { appendWorkout } from '../lib/history';
+import { reconcileDayBests } from '../lib/bests';
 
 type CompletionState = { elapsed: number };
 
@@ -81,6 +82,8 @@ export default function CompletionPage() {
       ...(trimmedTitle && trimmedTitle !== dayName ? { title: trimmedTitle } : {}),
       ...(trimmedNote ? { note: trimmedNote } : {}),
     });
+    // PRs reconcile from this workout's logged sets — the source of truth.
+    reconcileDayBests(day!, completedSets, completedAt);
     endSession(day!.id);
     navigate(`/congrats/${day!.id}`, {
       state: {

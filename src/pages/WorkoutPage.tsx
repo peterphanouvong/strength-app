@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Check, Timer, Plus, X, History, MoreVertical } from 'lucide-react';
+import { ChevronLeft, Check, Timer, Plus, X, History, Medal, MoreVertical } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { TRAINING_PLAN, WorkoutDay, Exercise } from '../data';
 import { cn } from '../lib/utils';
@@ -14,6 +14,7 @@ import {
   hapticSetDone,
   hapticSetUndone,
   hapticExerciseDone,
+  hapticNewBest,
   hapticWorkoutDone,
   hapticTap,
   hapticSelect,
@@ -23,6 +24,7 @@ import {
 } from '../lib/feedback';
 import { startRest, extendRest, skipRest, subscribeRest, getRest, getRestRemaining } from '../lib/rest';
 import { ActiveSession, getActiveSession, startSession, endSession } from '../lib/session';
+import { recordSetBest } from '../lib/bests';
 import { useEntranceOnce } from '../lib/animation';
 
 const REST_OVERRIDES_KEY = 'vb-rest-overrides-v1';
@@ -161,6 +163,9 @@ export default function WorkoutPage() {
   const [restTarget, setRestTarget] = useState<Exercise | null>(null);
   const [historyTarget, setHistoryTarget] = useState<Exercise | null>(null);
   const [justCompleted, setJustCompleted] = useState<string | null>(null);
+  // Set rows that hit a new personal best this visit (key → when). Un-ticking
+  // neither clears the badge nor revokes the stored best (spec: keep it simple).
+  const [prBadges, setPrBadges] = useState<Record<string, number>>({});
   const [notifPerm, setNotifPerm] = useState(notificationPermission());
   const [cancelOpen, setCancelOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
@@ -258,13 +263,23 @@ export default function WorkoutPage() {
       };
     });
     if (!wasCompleted) {
+      // New personal best? Checked against the stored bests and, if beaten,
+      // stored immediately — time-tracked exercises never qualify.
+      const isBest = recordSetBest(
+        exercise,
+        { ...(completedSets[key] ?? {}), completed: true },
+        day!.id
+      );
+      if (isBest) setPrBadges((prev) => ({ ...prev, [key]: Date.now() }));
       // Dopamine: pop + burst + haptic + blip
       setJustCompleted(`${key}:${Date.now()}`);
       playSetDone();
       const doneInExercise = Array.from({ length: exercise.sets }).filter(
         (_, i) => i === setIndex || completedSets[`${exercise.id}-${i}`]?.completed
       ).length;
-      if (doneInExercise === exercise.sets) {
+      if (isBest) {
+        hapticNewBest();
+      } else if (doneInExercise === exercise.sets) {
         hapticExerciseDone();
       } else {
         hapticSetDone();
@@ -408,6 +423,7 @@ export default function WorkoutPage() {
                 restSec={restFor(exercise)}
                 completedSets={completedSets}
                 justCompleted={justCompleted}
+                prBadges={prBadges}
                 toggleSet={toggleSet}
                 updateSetLog={updateSetLog}
                 getPreviousSetLog={getPreviousSetLog}
@@ -873,6 +889,7 @@ const ExerciseSection: React.FC<{
   restSec: number;
   completedSets: ProgressMap;
   justCompleted: string | null;
+  prBadges: Record<string, number>;
   toggleSet: (exercise: Exercise, setIndex: number) => void;
   updateSetLog: (exerciseId: string, setIndex: number, field: 'weight' | 'actualReps' | 'timeSec', value: string) => void;
   getPreviousSetLog: (exerciseName: string, currentWeekNum: number, setIndex: number) => SetLog | null;
@@ -887,6 +904,7 @@ const ExerciseSection: React.FC<{
   restSec,
   completedSets,
   justCompleted,
+  prBadges,
   toggleSet,
   updateSetLog,
   getPreviousSetLog,
@@ -959,6 +977,7 @@ const ExerciseSection: React.FC<{
           const log = completedSets[key] || { completed: false, weight: '', actualReps: '' };
           const prevLog = getPreviousSetLog(exercise.name, weekNum, setIndex);
           const isJustCompleted = justCompleted?.startsWith(`${key}:`) ?? false;
+          const prAt = prBadges[key];
 
           const inputClass = cn(
             'w-full text-center rounded-lg py-2.5 text-sm font-bold tabular-nums text-white',
@@ -1057,32 +1076,48 @@ const ExerciseSection: React.FC<{
               )}
 
               <div className="col-span-2 flex justify-center">
-                <motion.button
-                  onClick={() => toggleSet(exercise, setIndex)}
-                  whileTap={{ scale: 0.85 }}
-                  animate={isJustCompleted ? { scale: [1, 1.3, 1], rotate: [0, -6, 0] } : { scale: 1 }}
-                  transition={{ duration: 0.35, ease: 'easeOut' }}
-                  aria-label={log.completed ? 'Mark set incomplete' : 'Mark set complete'}
-                  className={cn(
-                    'relative w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-200',
-                    log.completed ? 'bg-mint text-court-deep' : 'bg-white/10 text-mist hover:bg-white/20'
-                  )}
-                >
-                  {isJustCompleted && (
+                <div className="relative">
+                  <motion.button
+                    onClick={() => toggleSet(exercise, setIndex)}
+                    whileTap={{ scale: 0.85 }}
+                    animate={isJustCompleted ? { scale: [1, 1.3, 1], rotate: [0, -6, 0] } : { scale: 1 }}
+                    transition={{ duration: 0.35, ease: 'easeOut' }}
+                    aria-label={log.completed ? 'Mark set incomplete' : 'Mark set complete'}
+                    className={cn(
+                      'relative w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-200',
+                      log.completed ? 'bg-mint text-court-deep' : 'bg-white/10 text-mist hover:bg-white/20'
+                    )}
+                  >
+                    {isJustCompleted && (
+                      <motion.span
+                        key={justCompleted}
+                        className="absolute inset-0 rounded-xl border-2 border-mint pointer-events-none"
+                        initial={{ opacity: 0.9, scale: 1 }}
+                        animate={{ opacity: 0, scale: 2.1 }}
+                        transition={{ duration: 0.55, ease: 'easeOut' }}
+                      />
+                    )}
+                    {log.completed ? (
+                      <Check className="w-5 h-5" strokeWidth={3} />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border-2 border-white/40" />
+                    )}
+                  </motion.button>
+                  {/* New-best rosette — its own pop, distinct from the tick burst */}
+                  {prAt && (
                     <motion.span
-                      key={justCompleted}
-                      className="absolute inset-0 rounded-xl border-2 border-mint pointer-events-none"
-                      initial={{ opacity: 0.9, scale: 1 }}
-                      animate={{ opacity: 0, scale: 2.1 }}
-                      transition={{ duration: 0.55, ease: 'easeOut' }}
-                    />
+                      key={prAt}
+                      role="img"
+                      aria-label="New best"
+                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-zest text-court-deep flex items-center justify-center shadow-md pointer-events-none"
+                      initial={{ scale: 0, rotate: -30 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: 'spring', stiffness: 520, damping: 16 }}
+                    >
+                      <Medal className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    </motion.span>
                   )}
-                  {log.completed ? (
-                    <Check className="w-5 h-5" strokeWidth={3} />
-                  ) : (
-                    <div className="w-4 h-4 rounded-full border-2 border-white/40" />
-                  )}
-                </motion.button>
+                </div>
               </div>
             </div>
           );

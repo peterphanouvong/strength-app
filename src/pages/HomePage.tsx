@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, Play } from 'lucide-react';
+import { ChevronRight, Medal, Play } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { TRAINING_PLAN } from '../data';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -9,6 +9,7 @@ import { useActiveSession } from '../lib/session';
 import { hapticSelect } from '../lib/feedback';
 import { useEntranceOnce } from '../lib/animation';
 import { coerceHistory, getWeekStreak, CompletedWorkout, HISTORY_KEY } from '../lib/history';
+import { getBests, listPrs } from '../lib/bests';
 import { formatElapsed } from './WorkoutPage';
 
 function greeting(): string {
@@ -26,6 +27,8 @@ export default function HomePage() {
   const [historyRaw] = useLocalStorage<CompletedWorkout[]>(HISTORY_KEY, []);
   const streak = getWeekStreak(coerceHistory(historyRaw));
   const { session, elapsed } = useActiveSession();
+  // First read bootstraps vb-personal-bests-v1 from the progress map (spec, phase C).
+  const [recentPrs] = useState(() => listPrs(getBests()).slice(0, 3));
 
   // Resume point: the first week that still has incomplete sets.
   const currentWeek =
@@ -125,7 +128,25 @@ export default function HomePage() {
           </motion.div>
         </div>
 
-        {/* Recent PRs render here in phase C (vb-personal-bests-v1) — nothing until real data exists. */}
+        {recentPrs.length > 0 && (
+          <motion.section className="mt-8" {...rise(session ? 0.22 : 0.15)}>
+            <h2 className="text-lg font-bold tracking-[-0.02em]">Recent PRs</h2>
+            <ul
+              aria-label="Recent PRs"
+              className="bg-white/5 rounded-2xl divide-y divide-white/[0.06] overflow-hidden mt-3"
+            >
+              {recentPrs.map((pr) => (
+                <li key={`${pr.exercise}-${pr.label}`} className="flex items-center gap-3 px-4 py-3">
+                  <Medal className="w-4 h-4 text-zest flex-shrink-0" />
+                  <p className="font-bold tracking-[-0.02em] text-sm min-w-0 truncate flex-1">
+                    {pr.exercise}
+                  </p>
+                  <p className="text-sm font-bold text-zest tabular-nums flex-shrink-0">{pr.label}</p>
+                </li>
+              ))}
+            </ul>
+          </motion.section>
+        )}
       </main>
     </div>
   );

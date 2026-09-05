@@ -1,7 +1,8 @@
-// Renders a 1080×1920 story-format card and hands it to the native share sheet
-// (Instagram shows up there when sharing an image). Falls back to a download.
+// Renders a 1080×1920 story-format card for the share-preview sheet. Sharing
+// hands the image to the native share sheet (Instagram shows up there when
+// sharing an image) and falls back to a download when that's unavailable.
 
-type ShareStats = {
+export type ShareStats = {
   dayName: string;
   weekNum: number;
   duration: string;
@@ -9,7 +10,7 @@ type ShareStats = {
   sets: string;
 };
 
-async function renderCard({ dayName, weekNum, duration, volume, sets }: ShareStats): Promise<Blob> {
+export async function renderShareCard({ dayName, weekNum, duration, volume, sets }: ShareStats): Promise<Blob> {
   await document.fonts.ready;
 
   const W = 1080;
@@ -89,9 +90,21 @@ async function renderCard({ dayName, weekNum, duration, volume, sets }: ShareSta
   );
 }
 
-/** Returns how the share ended: shared via sheet, downloaded, or cancelled. */
-export async function shareWorkout(stats: ShareStats): Promise<'shared' | 'downloaded' | 'cancelled'> {
-  const blob = await renderCard(stats);
+/** Save the rendered card to disk (the "Save image" action and the no-share fallback). */
+export function downloadImage(blob: Blob, weekNum: number) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `workout-week${weekNum}.png`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Share an already-rendered card: native share sheet when available, else the
+ * same download fallback as always. Returns how it ended.
+ */
+export async function shareImage(blob: Blob, weekNum: number): Promise<'shared' | 'downloaded' | 'cancelled'> {
   const file = new File([blob], 'workout.png', { type: 'image/png' });
 
   if (navigator.canShare?.({ files: [file] })) {
@@ -103,11 +116,6 @@ export async function shareWorkout(stats: ShareStats): Promise<'shared' | 'downl
     }
   }
 
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `workout-week${stats.weekNum}.png`;
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadImage(blob, weekNum);
   return 'downloaded';
 }
