@@ -60,7 +60,7 @@ export default function WeeksPage() {
 
   return (
     <div className="min-h-screen">
-      <main className="max-w-xl mx-auto px-5 pt-10 pb-16">
+      <main className="max-w-xl mx-auto px-5 pt-10 pb-32">
         {/* Hero */}
         <motion.header className="mb-10" {...rise(0)}>
           <p className="text-sm font-bold text-zest mb-3">Volleyball Strength</p>

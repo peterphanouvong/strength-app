@@ -2,9 +2,11 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { TRAINING_PLAN } from '../data';
+import { cn } from '../lib/utils';
 import { useActiveSession } from '../lib/session';
 import { hapticTap } from '../lib/feedback';
 import { formatElapsed } from '../pages/WorkoutPage';
+import { isTabBarRoute } from './TabBar';
 
 export function ActiveWorkoutPill() {
   const { session, elapsed } = useActiveSession();
@@ -26,13 +28,21 @@ export function ActiveWorkoutPill() {
     !session ||
     !title ||
     location.pathname === `/workout/${session.dayId}` ||
-    location.pathname.startsWith('/complete/');
+    location.pathname.startsWith('/complete/') ||
+    location.pathname.startsWith('/congrats/');
+
+  // Stack above the tab bar (and above a preview page's Start CTA) instead of
+  // overlapping the bottom controls; bottom-4 elsewhere.
+  const lifted = isTabBarRoute(location.pathname) || location.pathname.startsWith('/workout/');
 
   return (
     <AnimatePresence>
       {!hidden && session && (
         <motion.div
-          className="fixed bottom-4 inset-x-4 z-30 flex justify-center pointer-events-none"
+          className={cn(
+            'fixed inset-x-4 z-30 flex justify-center pointer-events-none',
+            lifted ? 'bottom-[5.5rem]' : 'bottom-4'
+          )}
           initial={{ y: 70, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 70, opacity: 0 }}

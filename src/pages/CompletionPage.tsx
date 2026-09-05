@@ -1,104 +1,115 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
-import { Share } from 'lucide-react';
-import { TRAINING_PLAN } from '../data';
+import { ChevronLeft } from 'lucide-react';
+import { TRAINING_PLAN, WorkoutDay } from '../data';
 import { formatElapsed } from './WorkoutPage';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { PROGRESS_KEY, ProgressMap, getDayProgress, getDayVolume } from '../lib/progress';
 import { hapticTap, hapticSelect } from '../lib/feedback';
-import { shareWorkout } from '../lib/share';
+import { endSession, getActiveSession } from '../lib/session';
+import { appendWorkout } from '../lib/history';
+import { reconcileDayBests } from '../lib/bests';
 
-type CompletionState = {
-  elapsed: number;
-  volume: number;
-  setsDone: number;
-  totalSets: number;
-  weekNum: number;
-  dayTitle: string;
-};
+type CompletionState = { elapsed: number };
 
-const CONFETTI_COLORS = ['#f7e353', '#7bf1a8', '#ffffff', '#ff3d2e', '#b9b9f2'];
-
-const Confetti: React.FC = () => {
-  const pieces = Array.from({ length: 28 });
-  return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
-      {pieces.map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-[2px]"
-          style={{
-            left: `${(i * 37 + 11) % 100}%`,
-            top: -20,
-            width: i % 3 === 0 ? 10 : 6,
-            height: i % 3 === 0 ? 6 : 12,
-            backgroundColor: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-          }}
-          initial={{ y: -30, opacity: 1, rotate: (i * 53) % 360 }}
-          animate={{ y: '105vh', opacity: [1, 1, 0.8], rotate: (i * 53) % 360 + ((i % 2 === 0 ? 1 : -1) * 540) }}
-          transition={{
-            duration: 2.6 + (i % 5) * 0.5,
-            delay: (i % 9) * 0.12,
-            ease: [0.2, 0.6, 0.4, 1],
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
+/**
+ * The save screen (Finish → here). The session deliberately survives arriving:
+ * it only ends at Save (written to history) or Discard (day's sets cleared), so
+ * the back arrow returns losslessly to the live workout.
+ */
 export default function CompletionPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const reduceMotion = useReducedMotion();
-
   const state = (location.state ?? null) as CompletionState | null;
 
-  // Fallbacks for a direct visit without router state
-  let weekNum = state?.weekNum;
-  let dayTitle = state?.dayTitle;
-  if (!weekNum || !dayTitle) {
-    for (const week of TRAINING_PLAN) {
-      const found = week.days.find((d) => d.id === id);
-      if (found) {
-        weekNum = week.weekNumber;
-        dayTitle = found.title;
-        break;
-      }
+  // Find the day across all weeks — stats recompute from the progress map, so a
+  // direct visit (no router state) still shows the truth.
+  let day: WorkoutDay | undefined;
+  let weekNum = 1;
+  for (const week of TRAINING_PLAN) {
+    const found = week.days.find((d) => d.id === id);
+    if (found) {
+      day = found;
+      weekNum = week.weekNumber;
+      break;
     }
   }
+  const dayName = day ? day.title.split(': ')[1] || day.title : '';
 
-  const [shareState, setShareState] = useState<'idle' | 'busy' | 'saved'>('idle');
+  const [completedSets, setCompletedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
+  const [title, setTitle] = useState(dayName);
+  const [note, setNote] = useState('');
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  // Duration is frozen on arrival — the workout is over; only saving remains.
+  const [elapsed] = useState(() => {
+    const session = getActiveSession();
+    if (session && session.dayId === id) return Math.floor((Date.now() - session.startedAt) / 1000);
+    return state?.elapsed ?? 0;
+  });
 
-  if (!weekNum || !dayTitle) {
+  if (!day) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
         <p className="text-mist">Workout not found.</p>
-        <button onClick={() => navigate('/')} className="text-white font-bold underline">
+        <button onClick={() => navigate('/programme')} className="text-white font-bold underline">
           Back to programme
         </button>
       </div>
     );
   }
 
-  const dayName = dayTitle.split(': ')[1] || dayTitle;
+  const progress = getDayProgress(day, completedSets);
+  const volume = getDayVolume(day, completedSets);
 
-  const handleShare = async () => {
-    if (!state || shareState === 'busy') return;
+  const saveWorkout = () => {
     hapticSelect();
-    setShareState('busy');
-    try {
-      const result = await shareWorkout({
-        dayName,
-        weekNum: weekNum ?? 1,
-        duration: formatElapsed(state.elapsed),
-        volume: `${Math.round(state.volume).toLocaleString()} kg`,
-        sets: `${state.setsDone}/${state.totalSets}`,
-      });
-      setShareState(result === 'downloaded' ? 'saved' : 'idle');
-    } catch {
-      setShareState('idle');
-    }
+    const completedAt = Date.now();
+    const trimmedTitle = title.trim();
+    const trimmedNote = note.trim();
+    appendWorkout({
+      id: `${day!.id}-${completedAt}`,
+      dayId: day!.id,
+      weekNum,
+      dayTitle: day!.title,
+      completedAt,
+      elapsed,
+      volume,
+      setsDone: progress.completed,
+      totalSets: progress.total,
+      ...(trimmedTitle && trimmedTitle !== dayName ? { title: trimmedTitle } : {}),
+      ...(trimmedNote ? { note: trimmedNote } : {}),
+    });
+    // PRs reconcile from this workout's logged sets — the source of truth.
+    reconcileDayBests(day!, completedSets, completedAt);
+    endSession(day!.id);
+    navigate(`/congrats/${day!.id}`, {
+      state: {
+        elapsed,
+        volume,
+        setsDone: progress.completed,
+        totalSets: progress.total,
+        weekNum,
+        dayTitle: day!.title,
+      },
+    });
+  };
+
+  // True discard — identical semantics to the live workout's cancel sheet:
+  // end the session AND clear this day's logged sets; nothing reaches history.
+  const discardWorkout = () => {
+    hapticSelect();
+    endSession(day!.id);
+    setCompletedSets((prev) => {
+      const next: ProgressMap = {};
+      for (const [key, log] of Object.entries(prev)) {
+        if (!key.startsWith(`${day!.id}-`)) next[key] = log;
+      }
+      return next;
+    });
+    navigate(`/week/${weekNum}`);
   };
 
   const rise = (delay: number) => ({
@@ -109,83 +120,116 @@ export default function CompletionPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {!reduceMotion && <Confetti />}
-
-      <main className="max-w-xl mx-auto w-full px-5 flex-1 flex flex-col justify-center py-12">
-        <motion.p className="text-sm font-bold text-mist mb-4" {...rise(0.05)}>
-          Week {weekNum} · {dayName}
-        </motion.p>
-
-        <motion.h1
-          className="text-[4rem] leading-[0.92] font-bold tracking-[-0.04em] uppercase"
-          {...rise(0.12)}
+      <header className="max-w-xl mx-auto w-full px-5 pt-4 flex items-center gap-3">
+        <button
+          onClick={() => {
+            hapticTap();
+            navigate(`/workout/${day!.id}`);
+          }}
+          aria-label="Back to workout"
+          className="w-10 h-10 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
         >
-          Nice
-          <br />
-          <span className="text-mint">work.</span>
-        </motion.h1>
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg font-bold tracking-[-0.02em] leading-tight">Save workout</h1>
+          <p className="text-[0.6875rem] font-bold text-mist">
+            Week {weekNum} · {dayName}
+          </p>
+        </div>
+      </header>
+
+      <main className="max-w-xl mx-auto w-full px-5 flex-1 flex flex-col justify-center py-10">
+        <motion.div {...rise(0.05)}>
+          <label htmlFor="workout-title" className="block text-[0.6875rem] font-bold text-mist mb-1.5">
+            Title
+          </label>
+          <input
+            id="workout-title"
+            type="text"
+            aria-label="Workout title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full bg-white/10 rounded-xl px-4 py-3.5 text-lg font-bold tracking-[-0.02em] text-white focus:outline-none focus:ring-2 focus:ring-mint"
+          />
+        </motion.div>
+
+        <motion.div className="mt-4" {...rise(0.12)}>
+          <label htmlFor="workout-note" className="block text-[0.6875rem] font-bold text-mist mb-1.5">
+            Note
+          </label>
+          <textarea
+            id="workout-note"
+            aria-label="Workout note"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="How did it feel? (optional)"
+            rows={3}
+            className="w-full bg-white/10 rounded-xl px-4 py-3.5 text-sm font-medium text-white placeholder:text-mist focus:outline-none focus:ring-2 focus:ring-mint resize-none"
+          />
+        </motion.div>
 
         <motion.div
-          className="bg-zest text-court-deep rounded-3xl p-6 mt-8"
+          className="bg-zest text-court-deep rounded-3xl p-6 mt-6"
           initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.25 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.2 }}
         >
           <div className="grid grid-cols-3 divide-x divide-court-deep/15">
             <div className="pr-4">
               <p className="text-xs font-bold text-court-deep/60">Duration</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
-                {state ? formatElapsed(state.elapsed) : '—'}
+                {formatElapsed(elapsed)}
               </p>
             </div>
             <div className="px-4">
               <p className="text-xs font-bold text-court-deep/60">Volume</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
-                {state ? `${Math.round(state.volume).toLocaleString()}` : '—'}
+                {Math.round(volume).toLocaleString()}
                 <span className="text-sm font-bold ml-0.5 text-court-deep/70">kg</span>
               </p>
             </div>
             <div className="pl-4">
               <p className="text-xs font-bold text-court-deep/60">Sets</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
-                {state ? `${state.setsDone}/${state.totalSets}` : '—'}
+                {progress.completed}/{progress.total}
               </p>
             </div>
           </div>
         </motion.div>
 
-        {state && (
+        <motion.button
+          onClick={saveWorkout}
+          className="mt-8 w-full bg-mint text-court-deep font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
+          {...rise(0.3)}
+        >
+          Save workout
+        </motion.button>
+
+        {confirmDiscard ? (
+          <div className="mt-3 bg-flame/10 rounded-2xl px-4 py-3.5">
+            <p className="text-sm font-bold text-flame text-center mb-3">
+              This clears {progress.completed} logged {progress.completed === 1 ? 'set' : 'sets'}.
+            </p>
+            <button
+              onClick={discardWorkout}
+              className="w-full bg-flame text-white font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
+            >
+              Yes, discard
+            </button>
+          </div>
+        ) : (
           <motion.button
-            onClick={handleShare}
-            className="mt-8 w-full bg-mint text-court-deep font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98] flex items-center justify-center gap-2"
-            {...rise(0.35)}
+            onClick={() => {
+              hapticTap();
+              setConfirmDiscard(true);
+            }}
+            className="mt-3 w-full text-flame font-bold text-sm py-3"
+            {...rise(0.38)}
           >
-            <Share className="w-5 h-5" />
-            {shareState === 'busy' ? 'Preparing…' : shareState === 'saved' ? 'Image saved' : 'Share'}
+            Discard workout
           </motion.button>
         )}
-
-        <motion.button
-          onClick={() => {
-            hapticTap();
-            navigate(`/week/${weekNum ?? 1}`);
-          }}
-          className="mt-3 w-full bg-white/10 text-white font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
-          {...rise(0.42)}
-        >
-          Done
-        </motion.button>
-
-        <motion.button
-          onClick={() => {
-            hapticTap();
-            navigate('/');
-          }}
-          className="mt-4 w-full text-mist font-bold text-sm py-2"
-          {...rise(0.5)}
-        >
-          Back to programme
-        </motion.button>
       </main>
     </div>
   );

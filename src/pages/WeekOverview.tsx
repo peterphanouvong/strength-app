@@ -34,7 +34,7 @@ export default function WeekOverview() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
         <p className="text-mist">Week not found.</p>
-        <Link to="/" className="text-white font-bold underline">
+        <Link to="/programme" className="text-white font-bold underline">
           Back to programme
         </Link>
       </div>
@@ -45,13 +45,13 @@ export default function WeekOverview() {
 
   return (
     <div className="min-h-screen">
-      <main className="max-w-xl mx-auto px-5 pt-6 pb-16">
+      <main className="max-w-xl mx-auto px-5 pt-6 pb-32">
         {/* Top bar */}
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={() => {
               hapticTap();
-              navigate('/');
+              navigate('/programme');
             }}
             aria-label="Back to programme"
             className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"

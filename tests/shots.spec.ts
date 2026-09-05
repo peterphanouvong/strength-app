@@ -14,7 +14,7 @@ const settle = async (page: import('@playwright/test').Page, ms = 900) => {
 test.describe('shots', () => {
   test('V1 weeks list', async ({ page }) => {
     await seedStorage(page, { progress: canonicalW1D1() });
-    await page.goto('/');
+    await page.goto('/programme');
     await settle(page);
     await page.screenshot({ path: shot('v1-weeks'), fullPage: false });
   });
@@ -36,8 +36,8 @@ test.describe('shots', () => {
     await page.screenshot({ path: shot('v3-workout') });
   });
 
-  test('V4 completion', async ({ page }) => {
-    // Seed an aged session so the completion screen shows a real duration, matching
+  test('V4 completion (save screen)', async ({ page }) => {
+    // Seed an aged session so the save screen shows a real duration, matching
     // how the app behaves for a genuine workout (the flow reads elapsed from the
     // session's startedAt). Without this the stat card headlines a misleading 0:00.
     await seedStorage(page, {
@@ -48,12 +48,32 @@ test.describe('shots', () => {
     await settle(page);
     await page.getByRole('button', { name: 'Finish' }).click();
     await expect(page).toHaveURL(/\/complete\/w1-d1/);
+    await expect(page.getByRole('heading', { name: 'Save workout' })).toBeVisible();
     await settle(page, 1200);
     await page.screenshot({ path: shot('v4-completion') });
   });
 
+  test('V10 congrats (Finish → Save → congrats)', async ({ page }) => {
+    await seedStorage(page, {
+      progress: canonicalW1D1(),
+      session: { dayId: 'w1-d1', startedAt: Date.now() - 47 * 60_000 },
+    });
+    await page.goto('/workout/w1-d1');
+    await settle(page);
+    await page.getByRole('button', { name: 'Finish' }).click();
+    await expect(page).toHaveURL(/\/complete\/w1-d1/);
+    await page.getByRole('button', { name: 'Save workout' }).click();
+    await expect(page).toHaveURL(/\/congrats\/w1-d1/);
+    await settle(page, 1200);
+    await page.screenshot({ path: shot('v10-congrats') });
+  });
+
   test('V5a set type sheet', async ({ page }) => {
-    await seedStorage(page, { progress: partialW1D1() });
+    // Live session: set-type editing is disabled in browse-first preview mode.
+    await seedStorage(page, {
+      progress: partialW1D1(),
+      session: { dayId: 'w1-d1', startedAt: Date.now() - 8 * 60_000 },
+    });
     await page.goto('/workout/w1-d1');
     await settle(page);
     await page.getByRole('button', { name: 'Change set type' }).first().click();
@@ -62,7 +82,11 @@ test.describe('shots', () => {
   });
 
   test('V5b rest config sheet', async ({ page }) => {
-    await seedStorage(page, { progress: partialW1D1() });
+    // Live session: rest editing is disabled in browse-first preview mode.
+    await seedStorage(page, {
+      progress: partialW1D1(),
+      session: { dayId: 'w1-d1', startedAt: Date.now() - 8 * 60_000 },
+    });
     await page.goto('/workout/w1-d1');
     await settle(page);
     await page.getByRole('button', { name: /Rest timer:/ }).first().click();
@@ -139,8 +163,34 @@ test.describe('shots', () => {
     await seedStorage(page, {
       session: { dayId: 'w1-d1', startedAt: Date.now() - 12 * 60_000 },
     });
+    // Conflicts moved to the Start action: browsing never raises the sheet.
     await page.goto('/workout/w1-d2');
+    await settle(page);
+    await page.getByRole('button', { name: 'Start workout' }).click();
     await settle(page, 1000);
     await page.screenshot({ path: shot('v6c-conflict-sheet') });
+  });
+
+  test('V7 home dashboard', async ({ page }) => {
+    await seedStorage(page, {
+      progress: partialW1D1(),
+      session: { dayId: 'w1-d1', startedAt: Date.now() - 8 * 60_000 },
+    });
+    await page.goto('/');
+    await settle(page);
+    await page.screenshot({ path: shot('v7-home') });
+  });
+
+  test('V8 profile', async ({ page }) => {
+    await page.goto('/profile');
+    await settle(page);
+    await page.screenshot({ path: shot('v8-profile') });
+  });
+
+  test('V9 workout preview (browse-first, no session)', async ({ page }) => {
+    await seedStorage(page, { progress: partialW1D1() });
+    await page.goto('/workout/w1-d1');
+    await settle(page);
+    await page.screenshot({ path: shot('v9-workout-preview') });
   });
 });

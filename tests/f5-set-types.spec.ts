@@ -25,6 +25,8 @@ test.describe('F5 — set types', () => {
   test('tapping a set-number opens the type sheet; choosing W/F/D writes setType into the progress key; choosing Normal removes it', async ({
     page,
   }) => {
+    // Browse-first: set-type editing belongs to a live workout, so seed a session.
+    await seedStorage(page, { session: { dayId: 'w1-d1', startedAt: Date.now() } });
     await page.goto('/workout/w1-d1');
     await expect(page.getByRole('heading', { name: /Hang Power Clean/ })).toBeVisible();
     const hpc = exerciseSection(page, /Hang Power Clean/);
@@ -62,6 +64,8 @@ test.describe('F5 — set types', () => {
   test('the letter (colored) replaces the set number in the row; survives full reload', async ({
     page,
   }) => {
+    // Browse-first: set-type editing belongs to a live workout, so seed a session.
+    await seedStorage(page, { session: { dayId: 'w1-d1', startedAt: Date.now() } });
     await page.goto('/workout/w1-d1');
     await expect(page.getByRole('heading', { name: /Hang Power Clean/ })).toBeVisible();
     const hpc = exerciseSection(page, /Hang Power Clean/);

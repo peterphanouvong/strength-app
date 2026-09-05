@@ -1,5 +1,13 @@
 import { test, expect, type Page } from '@playwright/test';
-import { seedStorage, readStorage, PROGRESS_KEY, SESSION_KEY, type SetLog } from './helpers/fixtures';
+import {
+  seedStorage,
+  readStorage,
+  PROGRESS_KEY,
+  SESSION_KEY,
+  HISTORY_KEY,
+  type CompletedWorkout,
+  type SetLog,
+} from './helpers/fixtures';
 
 // F1 — full workout flow (docs/gauntlet/ANSWER_KEY.md).
 // Canonical fixture arithmetic: HPC 5×60×3 + Squat 4×80×6 + BSS 3×20×8 + HKR 3×10 reps
@@ -63,13 +71,14 @@ function statValue(page: Page, label: string) {
 }
 
 test.describe('F1 — full workout flow', () => {
-  test('start at /week/1, open Day A, tick every set of all 4 exercises with canonical weights, Finish → lands on /complete/w1-d1 with Sets 15/15, Volume 3,300 kg, plausible duration', async ({
+  test('start at /week/1, open Day A, tick every set of all 4 exercises with canonical weights, Finish → lands on the /complete/w1-d1 save screen with Sets 15/15, Volume 3,300 kg, plausible duration', async ({
     page,
   }) => {
     await runFullWorkoutFlow(page);
 
-    // Lands on /complete/w1-d1
+    // Lands on the /complete/w1-d1 save screen (2026-09-05 consumer flows spec).
     await expect(page).toHaveURL(/\/complete\/w1-d1$/);
+    await expect(page.getByRole('heading', { name: 'Save workout' })).toBeVisible();
 
     // Sets 15/15
     await expect(statValue(page, 'Sets')).toHaveText('15/15');
@@ -87,15 +96,16 @@ test.describe('F1 — full workout flow', () => {
     expect(m).toBeLessThanOrEqual(10);
   });
 
-  test('after Finish: vb-active-session-v1 is removed and progress key contains 15 entries with completed: true', async ({
+  test('Finish keeps the session alive (it ends at the save screen\'s Save); progress key contains 15 entries with completed: true', async ({
     page,
   }) => {
     await runFullWorkoutFlow(page);
     await expect(page).toHaveURL(/\/complete\/w1-d1$/);
 
-    // Session key removed
-    const session = await readStorage(page, SESSION_KEY);
-    expect(session).toBeNull();
+    // Spec change (2026-09-05 consumer flows): the session survives Finish so
+    // backing out of the save screen is lossless — it ends on Save/Discard.
+    const session = await readStorage<{ dayId: string; startedAt: number }>(page, SESSION_KEY);
+    expect(session?.dayId).toBe('w1-d1');
 
     // Progress key: exactly the 15 canonical entries, all completed: true
     const progress = await readStorage<Record<string, SetLog>>(page, PROGRESS_KEY);
@@ -110,6 +120,19 @@ test.describe('F1 — full workout flow', () => {
     expect(progress!['w1-d1-e1-0']).toMatchObject({ completed: true, weight: '60', actualReps: '3' });
     expect(progress!['w1-d1-e2-3']).toMatchObject({ completed: true, weight: '80', actualReps: '6' });
     expect(progress!['w1-d1-e4-2']).toMatchObject({ completed: true, actualReps: '10' });
+
+    // Save ends the session, writes the history entry and lands on congrats
+    // (spec re-aim: Done-on-/complete used to end the session; Save owns that now).
+    await page.getByRole('button', { name: 'Save workout' }).click();
+    await expect(page).toHaveURL(/\/congrats\/w1-d1$/);
+    expect(await readStorage(page, SESSION_KEY)).toBeNull();
+    const history = await readStorage<CompletedWorkout[]>(page, HISTORY_KEY);
+    expect(history).toHaveLength(1);
+    expect(history![0]).toMatchObject({ dayId: 'w1-d1', setsDone: 15, totalSets: 15, volume: 3300 });
+
+    // Done leaves the congrats screen back to the week.
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(page).toHaveURL(/\/week\/1$/);
   });
 
   test('finishing with 0 sets ticked navigates back to the week — no completion screen, no session left behind', async ({
@@ -118,6 +141,8 @@ test.describe('F1 — full workout flow', () => {
     await page.goto('/workout/w1-d1');
     await expect(page.getByRole('heading', { name: /Hang Power Clean/ })).toBeVisible();
 
+    // Browse-first: the page opens in preview, so go live before finishing.
+    await page.getByRole('button', { name: 'Start workout' }).click();
     await page.getByRole('button', { name: 'Finish' }).click();
 
     // Back on the week, not the completion screen

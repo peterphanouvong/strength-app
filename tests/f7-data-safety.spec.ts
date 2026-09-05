@@ -155,12 +155,19 @@ test.describe('F7 — data safety', () => {
       rest: { 'Back Squat': 0 },
     });
 
-    // No page crashes: all four routes render real UI.
+    // No page crashes: every route renders real UI.
     await page.goto('/');
+    await expect(
+      page.getByRole('heading', { name: /Good (morning|afternoon|evening)/ })
+    ).toBeVisible();
+    await page.goto('/programme');
     await expect(page.getByRole('heading', { name: /12-week/ })).toBeVisible();
     await page.goto('/week/1');
     await expect(page.getByRole('heading', { name: 'Week 1' })).toBeVisible();
+    // /complete is the save screen since phase B (spec re-aim from the old congrats layout).
     await page.goto('/complete/w1-d1');
+    await expect(page.getByRole('heading', { name: 'Save workout' })).toBeVisible();
+    await page.goto('/congrats/w1-d1');
     await expect(page.getByRole('heading', { name: /Nice/ })).toBeVisible();
     await page.goto('/workout/w1-d1');
     await expect(page.getByRole('heading', { name: /Hang Power Clean/ })).toBeVisible();
@@ -188,6 +195,11 @@ test.describe('F7 — data safety', () => {
       await seedRawStorage(page, { [key]: '{"oops": not-valid-json,,,' });
 
       await page.goto('/');
+      await expect(
+        page.getByRole('heading', { name: /Good (morning|afternoon|evening)/ })
+      ).toBeVisible();
+
+      await page.goto('/programme');
       await expect(page.getByRole('heading', { name: /12-week/ })).toBeVisible();
 
       await page.goto('/week/1');
@@ -195,14 +207,16 @@ test.describe('F7 — data safety', () => {
 
       await page.goto('/workout/w1-d1');
       await expect(page.getByRole('heading', { name: /Hang Power Clean/ })).toBeVisible();
-      // Defaults: no progress counted, rest chips shown, page fully interactive.
+      // Defaults: no progress counted, rest chips shown, page renders in preview.
       await expect(statValue(page, 'Sets')).toHaveText('0/15');
       await expect(
         section(page, /Hang Power Clean/).getByRole('button', { name: /Rest timer:/ })
       ).toBeVisible();
 
       if (key === SESSION_KEY) {
-        // The app recovers by starting a fresh, valid session.
+        // Corrupt session parses to "none" (preview mode); the app recovers by
+        // starting a fresh, valid session the moment the user taps Start.
+        await page.getByRole('button', { name: 'Start workout' }).click();
         const session = await readStorage<{ dayId: string; startedAt: number }>(page, SESSION_KEY);
         expect(session?.dayId).toBe('w1-d1');
         expect(typeof session?.startedAt).toBe('number');

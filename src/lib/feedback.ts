@@ -24,6 +24,7 @@ export const hapticSelect = () => haptic(30); // choosing something / starting s
 export const hapticSetDone = () => haptic(40);
 export const hapticSetUndone = () => haptic(15);
 export const hapticExerciseDone = () => haptic('success');
+export const hapticNewBest = () => haptic('success'); // new personal best — exercise-done tier
 export const hapticWorkoutDone = () => haptic('nudge');
 export const hapticRestOver = () => haptic('error'); // three sharp taps — attention
 
