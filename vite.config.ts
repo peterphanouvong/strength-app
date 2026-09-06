@@ -6,6 +6,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(() => {
   return {
+    // GitHub Pages serves the app under /strength-app/ (set by the deploy workflow).
+    base: process.env.GHPAGES ? '/strength-app/' : '/',
     plugins: [
       react(), 
       tailwindcss(),
