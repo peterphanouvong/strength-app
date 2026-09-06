@@ -14,7 +14,7 @@ function NotFound() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-3">
       <p className="text-secondary">Page not found.</p>
-      <Link to="/" className="text-white font-bold underline">
+      <Link to="/" className="text-ink font-bold underline">
         Back to home
       </Link>
     </div>

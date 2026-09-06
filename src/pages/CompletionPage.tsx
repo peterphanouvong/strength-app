@@ -54,7 +54,7 @@ export default function CompletionPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
         <p className="text-secondary">Workout not found.</p>
-        <button onClick={() => navigate('/programme')} className="text-white font-bold underline">
+        <button onClick={() => navigate('/programme')} className="text-ink font-bold underline">
           Back to programme
         </button>
       </div>
@@ -127,7 +127,7 @@ export default function CompletionPage() {
             navigate(`/workout/${day!.id}`);
           }}
           aria-label="Back to workout"
-          className="w-10 h-10 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+          className="w-10 h-10 flex-shrink-0 rounded-full bg-ink/10 hover:bg-ink/20 flex items-center justify-center transition-colors"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -150,7 +150,7 @@ export default function CompletionPage() {
             aria-label="Workout title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-white/10 rounded-xl px-4 py-3.5 text-lg font-bold tracking-[-0.02em] text-white focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full bg-ink/10 rounded-xl px-4 py-3.5 text-lg font-bold tracking-[-0.02em] text-ink focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </motion.div>
 
@@ -165,32 +165,32 @@ export default function CompletionPage() {
             onChange={(e) => setNote(e.target.value)}
             placeholder="How did it feel? (optional)"
             rows={3}
-            className="w-full bg-white/10 rounded-xl px-4 py-3.5 text-sm font-medium text-white placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            className="w-full bg-ink/10 rounded-xl px-4 py-3.5 text-sm font-medium text-ink placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           />
         </motion.div>
 
         <motion.div
-          className="bg-accent text-surface-deep rounded-3xl p-6 mt-6"
+          className="bg-accent text-onfill rounded-3xl p-6 mt-6"
           initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.2 }}
         >
           <div className="grid grid-cols-3 divide-x divide-surface-deep/15">
             <div className="pr-4">
-              <p className="text-xs font-bold text-surface-deep/60">Duration</p>
+              <p className="text-xs font-bold text-onfill/60">Duration</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {formatElapsed(elapsed)}
               </p>
             </div>
             <div className="px-4">
-              <p className="text-xs font-bold text-surface-deep/60">Volume</p>
+              <p className="text-xs font-bold text-onfill/60">Volume</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {Math.round(volume).toLocaleString()}
-                <span className="text-sm font-bold ml-0.5 text-surface-deep/70">kg</span>
+                <span className="text-sm font-bold ml-0.5 text-onfill/70">kg</span>
               </p>
             </div>
             <div className="pl-4">
-              <p className="text-xs font-bold text-surface-deep/60">Sets</p>
+              <p className="text-xs font-bold text-onfill/60">Sets</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {progress.completed}/{progress.total}
               </p>
@@ -200,7 +200,7 @@ export default function CompletionPage() {
 
         <motion.button
           onClick={saveWorkout}
-          className="mt-8 w-full bg-primary text-surface-deep font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
+          className="mt-8 w-full bg-primary text-onfill font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
           {...rise(0.3)}
         >
           Save workout
@@ -213,7 +213,7 @@ export default function CompletionPage() {
             </p>
             <button
               onClick={discardWorkout}
-              className="w-full bg-danger text-white font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
+              className="w-full bg-danger text-ink font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
             >
               Yes, discard
             </button>

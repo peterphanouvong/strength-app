@@ -4,8 +4,9 @@
  * Semantic tokens. Values below are the "Court" default theme; other themes
  * override these custom properties at runtime (src/lib/themes.ts sets them as
  * inline style props on <html>, and a boot script in index.html restores the
- * saved theme before first paint). Themes must keep grounds dark: every
- * surface in the app is a white-opacity overlay and all text is white-based.
+ * saved theme before first paint). Cards/overlays are ink-opacity tints and
+ * text is ink-based, so both dark grounds (ink = white) and light grounds
+ * (ink = near-black) work — set ink/onfill per theme.
  */
 @theme {
   --font-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -16,16 +17,18 @@
   --color-primary: #7bf1a8; /* progress, done, primary actions */
   --color-accent: #f7e353; /* small meta highlights, warm-up sets */
   --color-secondary: #b9b9f2; /* secondary text on the ground */
+  --color-ink: #ffffff; /* main text + overlay tint base (near-black on light themes) */
+  --color-onfill: #1e1eb8; /* text on primary/accent fills and inverse chips */
 }
 
 @layer base {
   body {
-    @apply bg-surface text-white antialiased;
+    @apply bg-surface text-ink antialiased;
     letter-spacing: -0.01em;
   }
 
   input::placeholder {
-    @apply text-white/30;
+    @apply text-ink/30;
   }
 }
 

@@ -5,14 +5,17 @@ export type ThemeVars = {
   accent: string;
   secondary: string;
   danger: string;
+  ink: string; // main text + overlay tint base
+  onFill: string; // text on primary/accent fills and inverse chips
 };
 
 export type Theme = { id: string; name: string; vars: ThemeVars };
 
 export const THEME_KEY = 'vb-theme-v1';
 
-// Grounds must stay dark: the app's cards are white-opacity overlays and all
-// text is white-based, so a light ground would need a contrast rework.
+// Cards are ink-opacity tints and text is ink-based, so grounds may be dark
+// (ink = white) or light (ink = near-black). Keep text-primary/accent/secondary
+// readable on the ground: ~4.5:1 for the small-text tokens (secondary).
 export const THEMES: Theme[] = [
   {
     id: 'court',
@@ -24,6 +27,8 @@ export const THEMES: Theme[] = [
       accent: '#f7e353',
       secondary: '#b9b9f2',
       danger: '#ff3d2e',
+      ink: '#ffffff',
+      onFill: '#1e1eb8',
     },
   },
   {
@@ -36,6 +41,8 @@ export const THEMES: Theme[] = [
       accent: '#fbbf24',
       secondary: '#a1a1aa',
       danger: '#f87171',
+      ink: '#ffffff',
+      onFill: '#0c0c0e',
     },
   },
   {
@@ -48,6 +55,8 @@ export const THEMES: Theme[] = [
       accent: '#ffd166',
       secondary: '#d8b4b4',
       danger: '#ff5d47',
+      ink: '#ffffff',
+      onFill: '#2a0d0d',
     },
   },
   {
@@ -60,6 +69,22 @@ export const THEMES: Theme[] = [
       accent: '#ffe14d',
       secondary: '#a9cabc',
       danger: '#ff6b5e',
+      ink: '#ffffff',
+      onFill: '#0c241c',
+    },
+  },
+  {
+    id: 'paper',
+    name: 'Paper',
+    vars: {
+      surface: '#f5f0e8',
+      surfaceDeep: '#e9e2d4',
+      primary: '#e05206',
+      accent: '#b45309',
+      secondary: '#6e675e',
+      danger: '#c22a1c',
+      ink: '#181310',
+      onFill: '#181310',
     },
   },
 ];
@@ -73,6 +98,8 @@ const CSS_PROP: Record<keyof ThemeVars, string> = {
   accent: '--color-accent',
   secondary: '--color-secondary',
   danger: '--color-danger',
+  ink: '--color-ink',
+  onFill: '--color-onfill',
 };
 
 export function getSavedThemeId(): string {

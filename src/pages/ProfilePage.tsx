@@ -79,7 +79,7 @@ export default function ProfilePage() {
           ) : (
             <ul
               aria-label="Workout history"
-              className="bg-white/5 rounded-2xl divide-y divide-white/[0.06] overflow-hidden mt-3"
+              className="bg-ink/5 rounded-2xl divide-y divide-ink/[0.06] overflow-hidden mt-3"
             >
               {recentFirst.map((entry) => (
                 <li key={entry.id} className="px-4 py-3">
@@ -97,7 +97,7 @@ export default function ProfilePage() {
                     sets
                   </p>
                   {entry.note && (
-                    <p className="text-xs text-white/80 leading-relaxed mt-1">{entry.note}</p>
+                    <p className="text-xs text-ink/80 leading-relaxed mt-1">{entry.note}</p>
                   )}
                 </li>
               ))}
@@ -110,7 +110,7 @@ export default function ProfilePage() {
             <h2 className="text-lg font-bold tracking-[-0.02em]">Personal bests</h2>
             <ul
               aria-label="Personal bests"
-              className="bg-white/5 rounded-2xl divide-y divide-white/[0.06] overflow-hidden mt-3"
+              className="bg-ink/5 rounded-2xl divide-y divide-ink/[0.06] overflow-hidden mt-3"
             >
               {prs.map((pr) => (
                 <li key={`${pr.exercise}-${pr.label}`} className="flex items-center gap-3 px-4 py-3">
@@ -125,21 +125,21 @@ export default function ProfilePage() {
           </motion.section>
         )}
 
-        <motion.section className="border-t border-dashed border-white/25 pt-6 mt-8" {...rise(0.2)}>
+        <motion.section className="border-t border-dashed border-ink/25 pt-6 mt-8" {...rise(0.2)}>
           <h2 className="text-lg font-bold tracking-[-0.02em]">Preferences</h2>
-          <div className="bg-white/5 rounded-2xl divide-y divide-white/[0.06] overflow-hidden mt-3">
+          <div className="bg-ink/5 rounded-2xl divide-y divide-ink/[0.06] overflow-hidden mt-3">
             {/* Theme */}
             <button
               onClick={() => {
                 hapticTap();
                 setThemeSheetOpen(true);
               }}
-              className="w-full flex items-center justify-between gap-3 px-4 py-4 text-left hover:bg-white/5 transition-colors"
+              className="w-full flex items-center justify-between gap-3 px-4 py-4 text-left hover:bg-ink/5 transition-colors"
             >
               <span className="font-bold text-sm">Theme</span>
               <span className="flex items-center gap-2 flex-shrink-0">
                 <span className="flex gap-1" aria-hidden>
-                  <span className="w-3.5 h-3.5 rounded-full border border-white/25" style={{ backgroundColor: currentTheme.vars.surface }} />
+                  <span className="w-3.5 h-3.5 rounded-full border border-ink/25" style={{ backgroundColor: currentTheme.vars.surface }} />
                   <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: currentTheme.vars.primary }} />
                   <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: currentTheme.vars.accent }} />
                 </span>
@@ -164,7 +164,7 @@ export default function ProfilePage() {
                       hapticTap();
                       setNotifPerm(await requestNotifications());
                     }}
-                    className="bg-white/10 hover:bg-white/20 font-bold text-xs px-3.5 py-2 rounded-full transition-colors"
+                    className="bg-ink/10 hover:bg-ink/20 font-bold text-xs px-3.5 py-2 rounded-full transition-colors"
                   >
                     Turn on
                   </button>
@@ -193,7 +193,7 @@ export default function ProfilePage() {
                   }}
                   className={cn(
                     'rounded-2xl p-4 text-left border transition-colors',
-                    selected ? 'border-primary' : 'border-white/15 hover:border-white/30'
+                    selected ? 'border-primary' : 'border-ink/15 hover:border-ink/30'
                   )}
                   style={{ backgroundColor: theme.vars.surface }}
                 >
@@ -205,8 +205,8 @@ export default function ProfilePage() {
                     style={{ backgroundColor: theme.vars.secondary, opacity: 0.6 }}
                   />
                   <span className="flex items-center justify-between mt-4">
-                    <span className="font-bold text-sm text-white">{theme.name}</span>
-                    {selected && <Check className="w-4 h-4 text-primary" strokeWidth={3} />}
+                    <span className="font-bold text-sm" style={{ color: theme.vars.ink }}>{theme.name}</span>
+                    {selected && <Check className="w-4 h-4" style={{ color: theme.vars.primary }} strokeWidth={3} />}
                   </span>
                 </button>
               );

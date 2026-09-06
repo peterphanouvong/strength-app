@@ -41,7 +41,7 @@ const REST_OPTIONS = [0, 30, 60, 90, 120, 150, 180, 240, 300];
 
 const SET_TYPES: { type: SetType | undefined; letter: string; label: string; hint: string; color: string }[] = [
   { type: 'W', letter: 'W', label: 'Warm-up set', hint: 'Lighter prep work before the working sets', color: 'text-accent' },
-  { type: undefined, letter: '1', label: 'Normal set', hint: 'A working set as prescribed', color: 'text-white' },
+  { type: undefined, letter: '1', label: 'Normal set', hint: 'A working set as prescribed', color: 'text-ink' },
   { type: 'F', letter: 'F', label: 'Failure set', hint: 'Taken to technical failure', color: 'text-danger' },
   { type: 'D', letter: 'D', label: 'Drop set', hint: 'Strip the load and keep going', color: 'text-secondary' },
 ];
@@ -174,7 +174,7 @@ export default function WorkoutPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
         <p className="text-secondary">Workout not found.</p>
-        <button onClick={() => navigate('/programme')} className="text-white font-bold underline">
+        <button onClick={() => navigate('/programme')} className="text-ink font-bold underline">
           Back to programme
         </button>
       </div>
@@ -352,7 +352,7 @@ export default function WorkoutPage() {
   return (
     <div className="min-h-screen pb-28">
       {/* Sticky header */}
-      <header className="bg-surface/90 backdrop-blur-md border-b border-white/10 sticky top-0 z-20">
+      <header className="bg-surface/90 backdrop-blur-md border-b border-ink/10 sticky top-0 z-20">
         <div className="max-w-xl mx-auto px-5 py-3 flex items-center gap-3">
           <button
             onClick={() => {
@@ -360,7 +360,7 @@ export default function WorkoutPage() {
               navigate(`/week/${weekNum}`);
             }}
             aria-label="Back to week"
-            className="w-10 h-10 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            className="w-10 h-10 flex-shrink-0 rounded-full bg-ink/10 hover:bg-ink/20 flex items-center justify-center transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -376,7 +376,7 @@ export default function WorkoutPage() {
             <>
               <button
                 onClick={finishWorkout}
-                className="flex-shrink-0 bg-primary text-surface-deep font-bold text-sm px-5 py-2.5 rounded-full transition-transform active:scale-95"
+                className="flex-shrink-0 bg-primary text-onfill font-bold text-sm px-5 py-2.5 rounded-full transition-transform active:scale-95"
               >
                 Finish
               </button>
@@ -386,13 +386,13 @@ export default function WorkoutPage() {
                   setCancelOpen(true);
                 }}
                 aria-label="Workout options"
-                className="w-10 h-10 flex-shrink-0 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                className="w-10 h-10 flex-shrink-0 rounded-full bg-ink/10 hover:bg-ink/20 flex items-center justify-center transition-colors"
               >
                 <MoreVertical className="w-5 h-5" />
               </button>
             </>
           ) : (
-            <span className="flex-shrink-0 bg-white/10 text-secondary font-bold text-xs px-3.5 py-2 rounded-full">
+            <span className="flex-shrink-0 bg-ink/10 text-secondary font-bold text-xs px-3.5 py-2 rounded-full">
               Preview
             </span>
           )}
@@ -461,7 +461,7 @@ export default function WorkoutPage() {
             <div className="max-w-xl mx-auto">
               <button
                 onClick={startWorkout}
-                className="w-full bg-primary text-surface-deep font-bold text-base py-4 rounded-full shadow-xl transition-transform active:scale-[0.98]"
+                className="w-full bg-primary text-onfill font-bold text-base py-4 rounded-full shadow-xl transition-transform active:scale-[0.98]"
               >
                 Start workout
               </button>
@@ -480,7 +480,7 @@ export default function WorkoutPage() {
             exit={{ y: 80, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 400, damping: 32 }}
           >
-            <div className="max-w-xl mx-auto bg-surface-deep border border-white/15 rounded-2xl px-4 py-3 shadow-xl">
+            <div className="max-w-xl mx-auto bg-surface-deep border border-ink/15 rounded-2xl px-4 py-3 shadow-xl">
               <div className="flex items-center gap-3">
                 <Timer className="w-5 h-5 text-primary flex-shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -492,7 +492,7 @@ export default function WorkoutPage() {
                     hapticTap();
                     extendRest(15);
                   }}
-                  className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-xs font-bold px-3 py-2 rounded-full transition-colors"
+                  className="flex items-center gap-1 bg-ink/10 hover:bg-ink/20 text-xs font-bold px-3 py-2 rounded-full transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" /> 15s
                 </button>
@@ -502,12 +502,12 @@ export default function WorkoutPage() {
                     skipRest();
                   }}
                   aria-label="Skip rest"
-                  className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors"
+                  className="w-9 h-9 bg-ink/10 hover:bg-ink/20 rounded-full flex items-center justify-center transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="mt-2 h-1 rounded-full bg-white/10 overflow-hidden">
+              <div className="mt-2 h-1 rounded-full bg-ink/10 overflow-hidden">
                 <div
                   className="h-full bg-primary rounded-full transition-all duration-300"
                   style={{ width: `${(restRemaining / rest.total) * 100}%` }}
@@ -539,7 +539,7 @@ export default function WorkoutPage() {
                 }}
                 className={cn(
                   'w-full flex items-center gap-3.5 px-3 py-2.5 rounded-2xl text-left transition-colors',
-                  selected ? 'bg-white/15' : 'bg-white/5 hover:bg-white/10'
+                  selected ? 'bg-ink/15' : 'bg-ink/5 hover:bg-ink/10'
                 )}
               >
                 <span
@@ -583,7 +583,7 @@ export default function WorkoutPage() {
                 }}
                 className={cn(
                   'py-3.5 rounded-xl font-bold text-[0.9375rem] tabular-nums transition-colors',
-                  selected ? 'bg-primary text-surface-deep' : 'bg-white/10 hover:bg-white/20'
+                  selected ? 'bg-primary text-onfill' : 'bg-ink/10 hover:bg-ink/20'
                 )}
               >
                 {seconds === 0 ? 'Off' : formatElapsed(seconds)}
@@ -596,7 +596,7 @@ export default function WorkoutPage() {
         </p>
 
         {notificationsSupported() && (
-          <div className="mt-5 border-t border-white/10 pt-4">
+          <div className="mt-5 border-t border-ink/10 pt-4">
             {notifPerm === 'granted' ? (
               <p className="text-xs text-primary font-bold text-center">
                 Notifications on — you'll get an alert when rest ends.
@@ -612,7 +612,7 @@ export default function WorkoutPage() {
                   hapticTap();
                   setNotifPerm(await requestNotifications());
                 }}
-                className="w-full bg-white/10 hover:bg-white/20 font-bold text-sm py-3 rounded-xl transition-colors"
+                className="w-full bg-ink/10 hover:bg-ink/20 font-bold text-sm py-3 rounded-xl transition-colors"
               >
                 Notify me when rest ends
               </button>
@@ -640,7 +640,7 @@ export default function WorkoutPage() {
         </p>
         <button
           onClick={endKeepingSets}
-          className="w-full bg-primary text-surface-deep font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
+          className="w-full bg-primary text-onfill font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
         >
           End workout, keep sets
         </button>
@@ -651,7 +651,7 @@ export default function WorkoutPage() {
             </p>
             <button
               onClick={discardWorkout}
-              className="w-full bg-danger text-white font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
+              className="w-full bg-danger text-ink font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
             >
               Yes, discard
             </button>
@@ -662,7 +662,7 @@ export default function WorkoutPage() {
               hapticTap();
               setConfirmDiscard(true);
             }}
-            className="w-full bg-white/10 hover:bg-white/20 text-danger font-bold text-sm py-3.5 rounded-xl mt-2 transition-colors"
+            className="w-full bg-ink/10 hover:bg-ink/20 text-danger font-bold text-sm py-3.5 rounded-xl mt-2 transition-colors"
           >
             Discard workout
           </button>
@@ -713,24 +713,24 @@ const ConflictContent: React.FC<{
   return (
     <div>
       <p className="text-sm text-secondary leading-relaxed mb-5">
-        <span className="font-bold text-white">{title}</span> has been running for {mins} min. Finish
+        <span className="font-bold text-ink">{title}</span> has been running for {mins} min. Finish
         or end it before starting this one.
       </p>
       <button
         onClick={onResume}
-        className="w-full bg-primary text-surface-deep font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
+        className="w-full bg-primary text-onfill font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
       >
         Go back to that workout
       </button>
       <button
         onClick={onTakeOver}
-        className="w-full bg-white/10 hover:bg-white/20 font-bold text-sm py-3.5 rounded-xl mt-2 transition-colors"
+        className="w-full bg-ink/10 hover:bg-ink/20 font-bold text-sm py-3.5 rounded-xl mt-2 transition-colors"
       >
         End it and start this one
       </button>
       <button
         onClick={onDiscardOther}
-        className="w-full bg-white/10 hover:bg-white/20 text-danger font-bold text-sm py-3.5 rounded-xl mt-2 transition-colors"
+        className="w-full bg-ink/10 hover:bg-ink/20 text-danger font-bold text-sm py-3.5 rounded-xl mt-2 transition-colors"
       >
         Discard the other workout
       </button>
@@ -806,7 +806,7 @@ const ExerciseHistory: React.FC<{ exercise: Exercise; completedSets: ProgressMap
               <p className="font-bold tracking-[-0.02em]">Week {entry.weekNumber}</p>
               <p className="text-xs font-medium text-secondary tabular-nums">{entry.prescription}</p>
             </div>
-            <div className="bg-white/5 rounded-2xl divide-y divide-white/[0.06] overflow-hidden">
+            <div className="bg-ink/5 rounded-2xl divide-y divide-ink/[0.06] overflow-hidden">
               {entry.sets.map((s, i) => (
                 <div key={i} className="flex items-center gap-3.5 px-3.5 py-2.5">
                   <span
@@ -844,7 +844,7 @@ const TopWeightChart: React.FC<{ points: { week: number; weight: number }[] }> =
   const heaviest = points.reduce((best, p) => (p.weight > best.weight ? p : best));
 
   return (
-    <div className="bg-white/5 rounded-2xl px-4 pt-3.5 pb-1 mb-6">
+    <div className="bg-ink/5 rounded-2xl px-4 pt-3.5 pb-1 mb-6">
       <p className="text-xs text-secondary font-medium">
         Heaviest set · <span className="text-primary font-bold">{heaviest.weight} kg</span> in week {heaviest.week}
       </p>
@@ -875,7 +875,7 @@ const Stat: React.FC<{ label: string; value: string; accent?: string; pop?: bool
   accent,
   pop,
 }) => (
-  <div className="bg-white/10 rounded-2xl px-3.5 py-3">
+  <div className="bg-ink/10 rounded-2xl px-3.5 py-3">
     <p className="text-[0.6875rem] font-bold text-secondary">{label}</p>
     {pop ? (
       <motion.p
@@ -947,9 +947,9 @@ const ExerciseSection: React.FC<{
           <h2 className="text-xl font-bold tracking-[-0.02em] leading-snug">
             {index + 1}. {exercise.name}
           </h2>
-          <History className="w-4 h-4 text-secondary flex-shrink-0 group-hover:text-white transition-colors" />
+          <History className="w-4 h-4 text-secondary flex-shrink-0 group-hover:text-ink transition-colors" />
         </button>
-        <span className="flex-shrink-0 bg-white text-surface text-xs font-bold px-2.5 py-1 rounded-md whitespace-nowrap mt-0.5">
+        <span className="flex-shrink-0 bg-ink text-surface text-xs font-bold px-2.5 py-1 rounded-md whitespace-nowrap mt-0.5">
           {exercise.sets} × {exercise.reps}
         </span>
       </div>
@@ -963,7 +963,7 @@ const ExerciseSection: React.FC<{
           onConfigureRest();
         }}
         disabled={!live}
-        className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/15 rounded-full pl-2.5 pr-3 py-1.5 mt-1.5 text-[0.8125rem] font-bold text-primary tabular-nums transition-colors disabled:opacity-60 disabled:hover:bg-white/10"
+        className="inline-flex items-center gap-1.5 bg-ink/10 hover:bg-ink/15 rounded-full pl-2.5 pr-3 py-1.5 mt-1.5 text-[0.8125rem] font-bold text-primary tabular-nums transition-colors disabled:opacity-60 disabled:hover:bg-ink/10"
       >
         <Timer className="w-3.5 h-3.5" />
         Rest timer: {restSec === 0 ? 'Off' : formatElapsed(restSec)}
@@ -992,8 +992,8 @@ const ExerciseSection: React.FC<{
           const prAt = prBadges[key];
 
           const inputClass = cn(
-            'w-full text-center rounded-lg py-2.5 text-sm font-bold tabular-nums text-white',
-            'bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary',
+            'w-full text-center rounded-lg py-2.5 text-sm font-bold tabular-nums text-ink',
+            'bg-ink/10 focus:outline-none focus:ring-2 focus:ring-primary',
             log.completed && 'bg-transparent',
             !live && 'opacity-60'
           );
@@ -1015,7 +1015,7 @@ const ExerciseSection: React.FC<{
                 disabled={!live}
                 aria-label="Change set type"
                 className={cn(
-                  'col-span-1 text-center font-bold tabular-nums py-1 rounded-md hover:bg-white/10 transition-colors',
+                  'col-span-1 text-center font-bold tabular-nums py-1 rounded-md hover:bg-ink/10 transition-colors',
                   log.setType
                     ? SET_TYPE_COLOR[log.setType]
                     : log.completed
@@ -1097,7 +1097,7 @@ const ExerciseSection: React.FC<{
                     aria-label={log.completed ? 'Mark set incomplete' : 'Mark set complete'}
                     className={cn(
                       'relative w-10 h-10 rounded-xl flex items-center justify-center transition-colors duration-200',
-                      log.completed ? 'bg-primary text-surface-deep' : 'bg-white/10 text-secondary hover:bg-white/20'
+                      log.completed ? 'bg-primary text-onfill' : 'bg-ink/10 text-secondary hover:bg-ink/20'
                     )}
                   >
                     {isJustCompleted && (
@@ -1112,7 +1112,7 @@ const ExerciseSection: React.FC<{
                     {log.completed ? (
                       <Check className="w-5 h-5" strokeWidth={3} />
                     ) : (
-                      <div className="w-4 h-4 rounded-full border-2 border-white/40" />
+                      <div className="w-4 h-4 rounded-full border-2 border-ink/40" />
                     )}
                   </motion.button>
                   {/* New-best rosette — its own pop, distinct from the tick burst */}
@@ -1121,7 +1121,7 @@ const ExerciseSection: React.FC<{
                       key={prAt}
                       role="img"
                       aria-label="New best"
-                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-accent text-surface-deep flex items-center justify-center shadow-md pointer-events-none"
+                      className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-accent text-onfill flex items-center justify-center shadow-md pointer-events-none"
                       initial={{ scale: 0, rotate: -30 }}
                       animate={{ scale: 1, rotate: 0 }}
                       transition={{ type: 'spring', stiffness: 520, damping: 16 }}

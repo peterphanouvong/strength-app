@@ -21,7 +21,7 @@ type CongratsState = {
   dayTitle: string;
 };
 
-const confettiColors = () => [themeColor('accent'), themeColor('primary'), '#ffffff', themeColor('danger'), themeColor('secondary')];
+const confettiColors = () => [themeColor('accent'), themeColor('primary'), themeColor('ink'), themeColor('danger'), themeColor('secondary')];
 
 const Confetti: React.FC = () => {
   const pieces = Array.from({ length: 28 });
@@ -87,7 +87,7 @@ export default function CongratsPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
         <p className="text-secondary">Workout not found.</p>
-        <button onClick={() => navigate('/programme')} className="text-white font-bold underline">
+        <button onClick={() => navigate('/programme')} className="text-ink font-bold underline">
           Back to programme
         </button>
       </div>
@@ -181,27 +181,27 @@ export default function CongratsPage() {
         </motion.h1>
 
         <motion.div
-          className="bg-accent text-surface-deep rounded-3xl p-6 mt-6"
+          className="bg-accent text-onfill rounded-3xl p-6 mt-6"
           initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.22 }}
         >
           <div className="grid grid-cols-3 divide-x divide-surface-deep/15">
             <div className="pr-4">
-              <p className="text-xs font-bold text-surface-deep/60">Duration</p>
+              <p className="text-xs font-bold text-onfill/60">Duration</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {state ? formatElapsed(state.elapsed) : '—'}
               </p>
             </div>
             <div className="px-4">
-              <p className="text-xs font-bold text-surface-deep/60">Volume</p>
+              <p className="text-xs font-bold text-onfill/60">Volume</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {state ? `${Math.round(state.volume).toLocaleString()}` : '—'}
-                {state && <span className="text-sm font-bold ml-0.5 text-surface-deep/70">kg</span>}
+                {state && <span className="text-sm font-bold ml-0.5 text-onfill/70">kg</span>}
               </p>
             </div>
             <div className="pl-4">
-              <p className="text-xs font-bold text-surface-deep/60">Sets</p>
+              <p className="text-xs font-bold text-onfill/60">Sets</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {state ? `${state.setsDone}/${state.totalSets}` : '—'}
               </p>
@@ -222,7 +222,7 @@ export default function CongratsPage() {
         {state && (
           <motion.button
             onClick={openPreview}
-            className="mt-7 w-full bg-primary text-surface-deep font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98] flex items-center justify-center gap-2"
+            className="mt-7 w-full bg-primary text-onfill font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98] flex items-center justify-center gap-2"
             {...rise(0.38)}
           >
             <Share className="w-5 h-5" />
@@ -235,7 +235,7 @@ export default function CongratsPage() {
             hapticTap();
             navigate(`/week/${weekNum}`);
           }}
-          className="mt-3 w-full bg-white/10 text-white font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
+          className="mt-3 w-full bg-ink/10 text-ink font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
           {...rise(0.45)}
         >
           Done
@@ -249,17 +249,17 @@ export default function CongratsPage() {
             <img
               src={preview.url}
               alt="Share card preview"
-              className="max-h-[42vh] mx-auto rounded-2xl border border-white/15"
+              className="max-h-[42vh] mx-auto rounded-2xl border border-ink/15"
             />
             <button
               onClick={sharePreview}
-              className="w-full bg-primary text-surface-deep font-bold text-sm py-3.5 rounded-xl mt-5 transition-transform active:scale-[0.98]"
+              className="w-full bg-primary text-onfill font-bold text-sm py-3.5 rounded-xl mt-5 transition-transform active:scale-[0.98]"
             >
               Share
             </button>
             <button
               onClick={savePreviewImage}
-              className="w-full bg-white/10 hover:bg-white/20 font-bold text-sm py-3.5 rounded-xl mt-2 transition-colors"
+              className="w-full bg-ink/10 hover:bg-ink/20 font-bold text-sm py-3.5 rounded-xl mt-2 transition-colors"
             >
               Save image
             </button>

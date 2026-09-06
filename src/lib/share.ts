@@ -1,4 +1,6 @@
 import { themeColor } from './themes';
+
+export const SITE_URL = 'peterphanouvong.github.io/strength-app';
 // Renders a 1080×1920 story-format card for the share-preview sheet. Sharing
 // hands the image to the native share sheet (Instagram shows up there when
 // sharing an image) and falls back to a download when that's unavailable.
@@ -27,6 +29,7 @@ export async function renderShareCard({ dayName, weekNum, duration, volume, sets
     accent: themeColor('accent'),
     secondary: themeColor('secondary'),
     danger: themeColor('danger'),
+    ink: themeColor('ink'),
   };
   const font = (weight: number, size: number) => `${weight} ${size}px "Space Grotesk", sans-serif`;
 
@@ -35,7 +38,7 @@ export async function renderShareCard({ dayName, weekNum, duration, volume, sets
   ctx.fillRect(0, 0, W, H);
 
   // Confetti
-  const colors = [c.accent, c.primary, '#ffffff', c.danger, c.secondary];
+  const colors = [c.accent, c.primary, c.ink, c.danger, c.secondary];
   for (let i = 0; i < 40; i++) {
     ctx.save();
     ctx.translate(((i * 263 + 97) % W), ((i * 379 + 151) % H));
@@ -53,13 +56,13 @@ export async function renderShareCard({ dayName, weekNum, duration, volume, sets
   ctx.font = font(700, 40);
   ctx.fillText('Volleyball Strength', left, 220);
 
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = c.ink;
   ctx.font = font(500, 44);
   ctx.fillText(`Week ${weekNum} · ${dayName}`, left, 300);
 
   // Headline
   ctx.font = font(700, 220);
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = c.ink;
   ctx.fillText('NICE', left, 640);
   ctx.fillStyle = c.primary;
   ctx.fillText('WORK.', left, 850);
@@ -89,10 +92,13 @@ export async function renderShareCard({ dayName, weekNum, duration, volume, sets
     ctx.textAlign = 'left';
   });
 
-  // Footer
+  // Footer: programme line + wordmark URL (the share card is the ad unit).
   ctx.fillStyle = c.secondary;
   ctx.font = font(500, 40);
-  ctx.fillText('12-week strength & power programme', left, H - 160);
+  ctx.fillText('12-week strength & power programme', left, H - 220);
+  ctx.fillStyle = c.primary;
+  ctx.font = font(700, 44);
+  ctx.fillText(SITE_URL, left, H - 130);
 
   return new Promise((resolve, reject) =>
     canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('canvas export failed'))), 'image/png')
