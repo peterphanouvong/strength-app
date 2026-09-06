@@ -159,6 +159,7 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
   index,
   completedSets,
 }) => {
+  const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
   const entered = useEntranceOnce('week-days');
   const progress = getDayProgress(day, completedSets);
@@ -173,11 +174,16 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.1 + index * 0.07, ease: 'easeOut' }}
     >
-    <Link
-      to={`/workout/${day.id}`}
-      onClick={hapticSelect}
-      className="flex bg-white/10 rounded-2xl overflow-hidden transition-transform active:scale-[0.98] hover:bg-white/15"
-    >
+    {/* Stretched-link card: the Link covers the whole card (→ preview); the
+        Start/Resume pill is a sibling button layered above it, so there are no
+        nested interactive elements. */}
+    <div className="relative flex bg-white/10 rounded-2xl overflow-hidden transition-transform active:scale-[0.98] hover:bg-white/15">
+      <Link
+        to={`/workout/${day.id}`}
+        onClick={hapticSelect}
+        aria-label={`${name} preview`}
+        className="absolute inset-0 z-0"
+      />
       {/* Poster panel */}
       <div
         className={cn(
@@ -209,15 +215,20 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
               <Check className="w-3.5 h-3.5" strokeWidth={3} />
             </span>
           ) : (
-            <span
+            <button
+              onClick={() => {
+                hapticSelect();
+                navigate(`/workout/${day.id}`, { state: { autostart: true } });
+              }}
+              aria-label={`${started ? 'Resume' : 'Start'} ${name}`}
               className={cn(
-                'flex items-center gap-1.5 text-[0.6875rem] font-bold px-3 py-1.5 rounded-full flex-shrink-0',
+                'relative z-10 flex items-center gap-1.5 text-[0.6875rem] font-bold px-3 py-1.5 rounded-full flex-shrink-0 transition-transform active:scale-95',
                 started ? 'bg-accent text-surface-deep' : 'bg-primary text-surface-deep'
               )}
             >
               <Play className="w-3 h-3 fill-current" />
               {started ? 'Resume' : 'Start'}
-            </span>
+            </button>
           )}
         </div>
         <h3 className="text-[1.0625rem] font-bold tracking-[-0.02em] leading-snug mt-0.5 truncate">
@@ -243,7 +254,7 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
           </span>
         </div>
       </div>
-    </Link>
+    </div>
     </motion.div>
   );
 };
