@@ -12,10 +12,10 @@ import { useEntranceOnce } from '../lib/animation';
 
 // Poster panel palettes, cycled per day
 const POSTERS = [
-  'bg-zest text-court-deep',
-  'bg-mint text-court-deep',
-  'bg-white text-court',
-  'bg-mist text-court-deep',
+  'bg-accent text-surface-deep',
+  'bg-primary text-surface-deep',
+  'bg-white text-surface',
+  'bg-secondary text-surface-deep',
 ];
 
 function posterWords(title: string): string[] {
@@ -33,7 +33,7 @@ export default function WeekOverview() {
   if (!week) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
-        <p className="text-mist">Week not found.</p>
+        <p className="text-secondary">Week not found.</p>
         <Link to="/programme" className="text-white font-bold underline">
           Back to programme
         </Link>
@@ -115,7 +115,7 @@ const WeekInfoTabs: React.FC<{ week: (typeof TRAINING_PLAN)[number] }> = ({ week
             }}
             className={cn(
               'px-3 py-2 rounded-full text-xs font-bold transition-colors',
-              active === tab.id ? 'bg-white text-court' : 'bg-white/10 text-mist hover:bg-white/20'
+              active === tab.id ? 'bg-white text-surface' : 'bg-white/10 text-secondary hover:bg-white/20'
             )}
           >
             {tab.label}
@@ -133,17 +133,17 @@ const WeekInfoTabs: React.FC<{ week: (typeof TRAINING_PLAN)[number] }> = ({ week
           transition={{ duration: 0.18 }}
         >
           {active === 'week' && <p className="text-white font-medium">{week.focus}</p>}
-          {active === 'goal' && <p className="text-mist">{week.blockNote}</p>}
-          {active === 'jumps' && <p className="text-mist">{week.jumpsNote}</p>}
+          {active === 'goal' && <p className="text-secondary">{week.blockNote}</p>}
+          {active === 'jumps' && <p className="text-secondary">{week.jumpsNote}</p>}
           {active === 'season' && (
             <div className="space-y-3">
-              <p className="text-xs text-mist">
-                If you're on court 3+ times a week, or the comp calendar tightens:
+              <p className="text-xs text-secondary">
+                If you're on surface 3+ times a week, or the comp calendar tightens:
               </p>
               {IN_SEASON_ADJUSTMENTS.map((adj) => (
                 <div key={adj.title}>
-                  <p className="font-bold text-zest">{adj.title}</p>
-                  <p className="text-mist">{adj.body}</p>
+                  <p className="font-bold text-accent">{adj.title}</p>
+                  <p className="text-secondary">{adj.body}</p>
                 </div>
               ))}
             </div>
@@ -203,16 +203,16 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
       {/* Content */}
       <div className="flex-1 min-w-0 p-4">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[0.6875rem] font-bold text-mist">{letter}</p>
+          <p className="text-[0.6875rem] font-bold text-secondary">{letter}</p>
           {done ? (
-            <span className="w-6 h-6 rounded-full bg-mint text-court-deep flex items-center justify-center flex-shrink-0">
+            <span className="w-6 h-6 rounded-full bg-primary text-surface-deep flex items-center justify-center flex-shrink-0">
               <Check className="w-3.5 h-3.5" strokeWidth={3} />
             </span>
           ) : (
             <span
               className={cn(
                 'flex items-center gap-1.5 text-[0.6875rem] font-bold px-3 py-1.5 rounded-full flex-shrink-0',
-                started ? 'bg-zest text-court-deep' : 'bg-mint text-court-deep'
+                started ? 'bg-accent text-surface-deep' : 'bg-primary text-surface-deep'
               )}
             >
               <Play className="w-3 h-3 fill-current" />
@@ -223,20 +223,20 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
         <h3 className="text-[1.0625rem] font-bold tracking-[-0.02em] leading-snug mt-0.5 truncate">
           {name}
         </h3>
-        <p className="text-xs text-mist mt-1">
+        <p className="text-xs text-secondary mt-1">
           {day.exercises.length} exercises · {progress.total} sets
         </p>
         <div className="flex items-center gap-2 mt-3">
-          <div className="flex-1 h-2 rounded-full bg-court-deep/60 overflow-hidden">
+          <div className="flex-1 h-2 rounded-full bg-surface-deep/60 overflow-hidden">
             <div
-              className="h-full rounded-full bg-mint transition-all duration-500"
+              className="h-full rounded-full bg-primary transition-all duration-500"
               style={{ width: `${progress.percentage}%` }}
             />
           </div>
           <span
             className={cn(
               'text-[0.6875rem] font-bold tabular-nums',
-              progress.completed > 0 ? 'text-mint' : 'text-mist'
+              progress.completed > 0 ? 'text-primary' : 'text-secondary'
             )}
           >
             {progress.completed}/{progress.total}

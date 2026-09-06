@@ -1,3 +1,4 @@
+import { themeColor } from './themes';
 // Renders a 1080×1920 story-format card for the share-preview sheet. Sharing
 // hands the image to the native share sheet (Instagram shows up there when
 // sharing an image) and falls back to a download when that's unavailable.
@@ -19,14 +20,22 @@ export async function renderShareCard({ dayName, weekNum, duration, volume, sets
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d')!;
+  const c = {
+    surface: themeColor('surface'),
+    surfaceDeep: themeColor('surfaceDeep'),
+    primary: themeColor('primary'),
+    accent: themeColor('accent'),
+    secondary: themeColor('secondary'),
+    danger: themeColor('danger'),
+  };
   const font = (weight: number, size: number) => `${weight} ${size}px "Space Grotesk", sans-serif`;
 
   // Background
-  ctx.fillStyle = '#2a2ae0';
+  ctx.fillStyle = c.surface;
   ctx.fillRect(0, 0, W, H);
 
   // Confetti
-  const colors = ['#f7e353', '#7bf1a8', '#ffffff', '#ff3d2e', '#b9b9f2'];
+  const colors = [c.accent, c.primary, '#ffffff', c.danger, c.secondary];
   for (let i = 0; i < 40; i++) {
     ctx.save();
     ctx.translate(((i * 263 + 97) % W), ((i * 379 + 151) % H));
@@ -40,7 +49,7 @@ export async function renderShareCard({ dayName, weekNum, duration, volume, sets
   const left = 96;
 
   // Header
-  ctx.fillStyle = '#b9b9f2';
+  ctx.fillStyle = c.secondary;
   ctx.font = font(700, 40);
   ctx.fillText('Volleyball Strength', left, 220);
 
@@ -52,13 +61,13 @@ export async function renderShareCard({ dayName, weekNum, duration, volume, sets
   ctx.font = font(700, 220);
   ctx.fillStyle = '#ffffff';
   ctx.fillText('NICE', left, 640);
-  ctx.fillStyle = '#7bf1a8';
+  ctx.fillStyle = c.primary;
   ctx.fillText('WORK.', left, 850);
 
   // Stats card
   const cardY = 1000;
   const cardH = 460;
-  ctx.fillStyle = '#f7e353';
+  ctx.fillStyle = c.accent;
   ctx.beginPath();
   ctx.roundRect(left, cardY, W - left * 2, cardH, 48);
   ctx.fill();
@@ -70,10 +79,10 @@ export async function renderShareCard({ dayName, weekNum, duration, volume, sets
   ];
   stats.forEach(([label, value], i) => {
     const y = cardY + 130 + i * 130;
-    ctx.fillStyle = 'rgba(30, 30, 184, 0.7)';
+    ctx.fillStyle = c.surfaceDeep + 'b3';
     ctx.font = font(700, 40);
     ctx.fillText(label, left + 72, y);
-    ctx.fillStyle = '#1e1eb8';
+    ctx.fillStyle = c.surfaceDeep;
     ctx.font = font(700, 72);
     ctx.textAlign = 'right';
     ctx.fillText(value, W - left - 72, y + 4);
@@ -81,7 +90,7 @@ export async function renderShareCard({ dayName, weekNum, duration, volume, sets
   });
 
   // Footer
-  ctx.fillStyle = '#b9b9f2';
+  ctx.fillStyle = c.secondary;
   ctx.font = font(500, 40);
   ctx.fillText('12-week strength & power programme', left, H - 160);
 

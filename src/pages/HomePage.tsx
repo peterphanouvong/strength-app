@@ -86,14 +86,14 @@ export default function HomePage() {
     <div className="min-h-screen">
       <main className="max-w-xl mx-auto px-5 pt-10 pb-32">
         <motion.header className="mb-8" {...rise(0)}>
-          <p className="text-sm font-bold text-zest mb-3">Volleyball Strength</p>
+          <p className="text-sm font-bold text-accent mb-3">Volleyball Strength</p>
           <h1 className="text-[3.25rem] leading-[0.95] font-bold tracking-[-0.035em]">
             {greeting()}
           </h1>
-          <p className="text-sm text-mist mt-4">Strength &amp; power for volleyball.</p>
+          <p className="text-sm text-secondary mt-4">Strength &amp; power for volleyball.</p>
           {streak > 0 && (
             <span className="inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3.5 py-2 mt-4 text-sm font-bold">
-              🔥 <span className="text-flame">{streak} week streak</span>
+              🔥 <span className="text-danger">{streak} week streak</span>
             </span>
           )}
         </motion.header>
@@ -106,16 +106,16 @@ export default function HomePage() {
                   hapticSelect();
                   navigate(`/workout/${session.dayId}`);
                 }}
-                className="w-full bg-mint text-court-deep rounded-2xl px-5 py-4 text-left transition-transform active:scale-[0.98]"
+                className="w-full bg-primary text-surface-deep rounded-2xl px-5 py-4 text-left transition-transform active:scale-[0.98]"
               >
-                <p className="text-[0.6875rem] font-bold text-court-deep/60">
+                <p className="text-[0.6875rem] font-bold text-surface-deep/60">
                   Workout in progress · <span className="tabular-nums">{formatElapsed(elapsed)}</span>
                 </p>
                 <div className="flex items-center justify-between gap-3 mt-1">
                   <h2 className="text-lg font-bold tracking-[-0.02em] min-w-0 truncate">
                     {sessionTitle}
                   </h2>
-                  <span className="flex items-center gap-1.5 bg-court-deep text-mint text-[0.6875rem] font-bold px-3 py-1.5 rounded-full flex-shrink-0">
+                  <span className="flex items-center gap-1.5 bg-surface-deep text-primary text-[0.6875rem] font-bold px-3 py-1.5 rounded-full flex-shrink-0">
                     <Play className="w-3 h-3 fill-current" />
                     Jump back in
                   </span>
@@ -130,25 +130,25 @@ export default function HomePage() {
               onClick={hapticSelect}
               className="block bg-white/10 rounded-2xl px-5 py-4 hover:bg-white/15 transition-transform active:scale-[0.98]"
             >
-              <p className="text-[0.6875rem] font-bold text-mist">Current week</p>
+              <p className="text-[0.6875rem] font-bold text-secondary">Current week</p>
               <div className="flex items-center justify-between gap-3 mt-1">
                 <h2 className="text-lg font-bold tracking-[-0.02em]">
                   Week {currentWeek.weekNumber}
                 </h2>
-                <ChevronRight className="w-5 h-5 text-mist flex-shrink-0 mr-9" />
+                <ChevronRight className="w-5 h-5 text-secondary flex-shrink-0 mr-9" />
               </div>
               <p className="text-xs leading-snug text-white/80 line-clamp-2 mt-1">
                 {currentWeek.focus}
               </p>
               {weekProgress.completed > 0 && (
                 <div className="flex items-center gap-2 mt-3.5">
-                  <div className="flex-1 h-2 rounded-full bg-court-deep/60 overflow-hidden">
+                  <div className="flex-1 h-2 rounded-full bg-surface-deep/60 overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-mint transition-all duration-500"
+                      className="h-full rounded-full bg-primary transition-all duration-500"
                       style={{ width: `${weekProgress.percentage}%` }}
                     />
                   </div>
-                  <span className="text-[0.6875rem] font-bold text-mint tabular-nums">
+                  <span className="text-[0.6875rem] font-bold text-primary tabular-nums">
                     {weekProgress.completed}/{weekProgress.total}
                   </span>
                 </div>
@@ -162,7 +162,7 @@ export default function HomePage() {
               aria-label="Change current week"
               className="absolute top-9 right-3.5 w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
             >
-              <MoreVertical className="w-4.5 h-4.5 text-mist" />
+              <MoreVertical className="w-4.5 h-4.5 text-secondary" />
             </button>
           </motion.div>
         </div>
@@ -210,11 +210,11 @@ export default function HomePage() {
             >
               {recentPrs.map((pr) => (
                 <li key={`${pr.exercise}-${pr.label}`} className="flex items-center gap-3 px-4 py-3">
-                  <Medal className="w-4 h-4 text-zest flex-shrink-0" />
+                  <Medal className="w-4 h-4 text-accent flex-shrink-0" />
                   <p className="font-bold tracking-[-0.02em] text-sm min-w-0 truncate flex-1">
                     {pr.exercise}
                   </p>
-                  <p className="text-sm font-bold text-zest tabular-nums flex-shrink-0">{pr.label}</p>
+                  <p className="text-sm font-bold text-accent tabular-nums flex-shrink-0">{pr.label}</p>
                 </li>
               ))}
             </ul>
@@ -242,8 +242,8 @@ const WeekOption: React.FC<{
   >
     <span className="flex-1 min-w-0">
       <span className={cn('block font-bold text-sm', labelClass)}>{label}</span>
-      <span className="block text-xs text-mist truncate">{hint}</span>
+      <span className="block text-xs text-secondary truncate">{hint}</span>
     </span>
-    {selected && <Check className="w-4 h-4 text-mint flex-shrink-0" strokeWidth={3} />}
+    {selected && <Check className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={3} />}
   </button>
 );

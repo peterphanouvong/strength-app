@@ -6,6 +6,30 @@
     <title>Volleyball Strength</title>
     <meta name="description" content="A 12-week strength and power training programme for volleyball players." />
     <meta name="theme-color" content="#2a2ae0" />
+    <script>
+      // Restore the saved theme before first paint (vars are persisted alongside
+      // the id by src/lib/themes.ts so this script needs no module imports).
+      (function () {
+        try {
+          var t = JSON.parse(localStorage.getItem('vb-theme-v1') || 'null');
+          if (!t || t.id === 'court' || !t.vars) return;
+          var m = {
+            surface: '--color-surface',
+            surfaceDeep: '--color-surface-deep',
+            primary: '--color-primary',
+            accent: '--color-accent',
+            secondary: '--color-secondary',
+            danger: '--color-danger',
+          };
+          for (var k in m) {
+            if (t.vars[k]) document.documentElement.style.setProperty(m[k], t.vars[k]);
+          }
+          document.documentElement.dataset.theme = t.id;
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta && t.vars.surface) meta.setAttribute('content', t.vars.surface);
+        } catch (e) {}
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

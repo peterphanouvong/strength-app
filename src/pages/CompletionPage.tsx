@@ -53,7 +53,7 @@ export default function CompletionPage() {
   if (!day) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
-        <p className="text-mist">Workout not found.</p>
+        <p className="text-secondary">Workout not found.</p>
         <button onClick={() => navigate('/programme')} className="text-white font-bold underline">
           Back to programme
         </button>
@@ -133,7 +133,7 @@ export default function CompletionPage() {
         </button>
         <div className="min-w-0 flex-1">
           <h1 className="text-lg font-bold tracking-[-0.02em] leading-tight">Save workout</h1>
-          <p className="text-[0.6875rem] font-bold text-mist">
+          <p className="text-[0.6875rem] font-bold text-secondary">
             Week {weekNum} · {dayName}
           </p>
         </div>
@@ -141,7 +141,7 @@ export default function CompletionPage() {
 
       <main className="max-w-xl mx-auto w-full px-5 flex-1 flex flex-col justify-center py-10">
         <motion.div {...rise(0.05)}>
-          <label htmlFor="workout-title" className="block text-[0.6875rem] font-bold text-mist mb-1.5">
+          <label htmlFor="workout-title" className="block text-[0.6875rem] font-bold text-secondary mb-1.5">
             Title
           </label>
           <input
@@ -150,12 +150,12 @@ export default function CompletionPage() {
             aria-label="Workout title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-white/10 rounded-xl px-4 py-3.5 text-lg font-bold tracking-[-0.02em] text-white focus:outline-none focus:ring-2 focus:ring-mint"
+            className="w-full bg-white/10 rounded-xl px-4 py-3.5 text-lg font-bold tracking-[-0.02em] text-white focus:outline-none focus:ring-2 focus:ring-primary"
           />
         </motion.div>
 
         <motion.div className="mt-4" {...rise(0.12)}>
-          <label htmlFor="workout-note" className="block text-[0.6875rem] font-bold text-mist mb-1.5">
+          <label htmlFor="workout-note" className="block text-[0.6875rem] font-bold text-secondary mb-1.5">
             Note
           </label>
           <textarea
@@ -165,32 +165,32 @@ export default function CompletionPage() {
             onChange={(e) => setNote(e.target.value)}
             placeholder="How did it feel? (optional)"
             rows={3}
-            className="w-full bg-white/10 rounded-xl px-4 py-3.5 text-sm font-medium text-white placeholder:text-mist focus:outline-none focus:ring-2 focus:ring-mint resize-none"
+            className="w-full bg-white/10 rounded-xl px-4 py-3.5 text-sm font-medium text-white placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
           />
         </motion.div>
 
         <motion.div
-          className="bg-zest text-court-deep rounded-3xl p-6 mt-6"
+          className="bg-accent text-surface-deep rounded-3xl p-6 mt-6"
           initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.2 }}
         >
-          <div className="grid grid-cols-3 divide-x divide-court-deep/15">
+          <div className="grid grid-cols-3 divide-x divide-surface-deep/15">
             <div className="pr-4">
-              <p className="text-xs font-bold text-court-deep/60">Duration</p>
+              <p className="text-xs font-bold text-surface-deep/60">Duration</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {formatElapsed(elapsed)}
               </p>
             </div>
             <div className="px-4">
-              <p className="text-xs font-bold text-court-deep/60">Volume</p>
+              <p className="text-xs font-bold text-surface-deep/60">Volume</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {Math.round(volume).toLocaleString()}
-                <span className="text-sm font-bold ml-0.5 text-court-deep/70">kg</span>
+                <span className="text-sm font-bold ml-0.5 text-surface-deep/70">kg</span>
               </p>
             </div>
             <div className="pl-4">
-              <p className="text-xs font-bold text-court-deep/60">Sets</p>
+              <p className="text-xs font-bold text-surface-deep/60">Sets</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {progress.completed}/{progress.total}
               </p>
@@ -200,20 +200,20 @@ export default function CompletionPage() {
 
         <motion.button
           onClick={saveWorkout}
-          className="mt-8 w-full bg-mint text-court-deep font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
+          className="mt-8 w-full bg-primary text-surface-deep font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98]"
           {...rise(0.3)}
         >
           Save workout
         </motion.button>
 
         {confirmDiscard ? (
-          <div className="mt-3 bg-flame/10 rounded-2xl px-4 py-3.5">
-            <p className="text-sm font-bold text-flame text-center mb-3">
+          <div className="mt-3 bg-danger/10 rounded-2xl px-4 py-3.5">
+            <p className="text-sm font-bold text-danger text-center mb-3">
               This clears {progress.completed} logged {progress.completed === 1 ? 'set' : 'sets'}.
             </p>
             <button
               onClick={discardWorkout}
-              className="w-full bg-flame text-white font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
+              className="w-full bg-danger text-white font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
             >
               Yes, discard
             </button>
@@ -224,7 +224,7 @@ export default function CompletionPage() {
               hapticTap();
               setConfirmDiscard(true);
             }}
-            className="mt-3 w-full text-flame font-bold text-sm py-3"
+            className="mt-3 w-full text-danger font-bold text-sm py-3"
             {...rise(0.38)}
           >
             Discard workout

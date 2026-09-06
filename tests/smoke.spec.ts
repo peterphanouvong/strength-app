@@ -40,7 +40,8 @@ test.describe('smoke', () => {
   test('profile renders heading and the notification control section', async ({ page }) => {
     await page.goto('/profile');
     await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Rest notifications' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Preferences' })).toBeVisible();
+    await expect(page.getByText('Rest notifications')).toBeVisible();
   });
 
   test('unknown workout id shows not-found, not a crash', async ({ page }) => {

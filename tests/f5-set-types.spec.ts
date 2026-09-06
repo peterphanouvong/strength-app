@@ -3,7 +3,7 @@ import { seedStorage, readStorage, PROGRESS_KEY, type SetLog } from './helpers/f
 
 // F5 — set types (docs/gauntlet/ANSWER_KEY.md).
 // Uses Hang Power Clean on /workout/w1-d1 (w1-d1-e1, 5 sets) throughout.
-// Set-type letters: W = warm-up (zest), F = failure (flame), D = drop (mist).
+// Set-type letters: W = warm-up (accent), F = failure (danger), D = drop (secondary).
 
 /** The exercise section on the workout page whose heading matches `name`. */
 function exerciseSection(page: Page, name: string | RegExp) {
@@ -82,11 +82,11 @@ test.describe('F5 — set types', () => {
 
     const assertLetters = async () => {
       await expect(setButtons.nth(0)).toHaveText('W');
-      await expect(setButtons.nth(0)).toHaveClass(/text-zest/);
+      await expect(setButtons.nth(0)).toHaveClass(/text-accent/);
       await expect(setButtons.nth(1)).toHaveText('F');
-      await expect(setButtons.nth(1)).toHaveClass(/text-flame/);
+      await expect(setButtons.nth(1)).toHaveClass(/text-danger/);
       await expect(setButtons.nth(2)).toHaveText('D');
-      await expect(setButtons.nth(2)).toHaveClass(/text-mist/);
+      await expect(setButtons.nth(2)).toHaveClass(/text-secondary/);
       // Untyped rows keep their set number.
       await expect(setButtons.nth(3)).toHaveText('4');
       await expect(setButtons.nth(4)).toHaveText('5');
@@ -123,11 +123,11 @@ test.describe('F5 — set types', () => {
     // Only the 4 completed sets are listed.
     await expect(sheet.getByText('60 kg × 3')).toHaveCount(4);
 
-    // Letters shown with the matching color class (W/F/D = zest/flame/mist).
-    await expect(sheet.getByText('W', { exact: true })).toHaveClass(/text-zest/);
-    await expect(sheet.getByText('F', { exact: true })).toHaveClass(/text-flame/);
-    await expect(sheet.getByText('D', { exact: true })).toHaveClass(/text-mist/);
+    // Letters shown with the matching color class (W/F/D = accent/danger/secondary).
+    await expect(sheet.getByText('W', { exact: true })).toHaveClass(/text-accent/);
+    await expect(sheet.getByText('F', { exact: true })).toHaveClass(/text-danger/);
+    await expect(sheet.getByText('D', { exact: true })).toHaveClass(/text-secondary/);
     // Untyped completed set falls back to its position number in the default color.
-    await expect(sheet.getByText('4', { exact: true })).toHaveClass(/text-mist/);
+    await expect(sheet.getByText('4', { exact: true })).toHaveClass(/text-secondary/);
   });
 });

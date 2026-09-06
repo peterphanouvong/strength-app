@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { themeColor } from '../lib/themes';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { Share } from 'lucide-react';
@@ -20,10 +21,11 @@ type CongratsState = {
   dayTitle: string;
 };
 
-const CONFETTI_COLORS = ['#f7e353', '#7bf1a8', '#ffffff', '#ff3d2e', '#b9b9f2'];
+const confettiColors = () => [themeColor('accent'), themeColor('primary'), '#ffffff', themeColor('danger'), themeColor('secondary')];
 
 const Confetti: React.FC = () => {
   const pieces = Array.from({ length: 28 });
+  const colors = confettiColors();
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
       {pieces.map((_, i) => (
@@ -35,7 +37,7 @@ const Confetti: React.FC = () => {
             top: -20,
             width: i % 3 === 0 ? 10 : 6,
             height: i % 3 === 0 ? 6 : 12,
-            backgroundColor: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+            backgroundColor: colors[i % colors.length],
           }}
           initial={{ y: -30, opacity: 1, rotate: (i * 53) % 360 }}
           animate={{ y: '105vh', opacity: [1, 1, 0.8], rotate: (i * 53) % 360 + ((i % 2 === 0 ? 1 : -1) * 540) }}
@@ -84,7 +86,7 @@ export default function CongratsPage() {
   if (!day) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
-        <p className="text-mist">Workout not found.</p>
+        <p className="text-secondary">Workout not found.</p>
         <button onClick={() => navigate('/programme')} className="text-white font-bold underline">
           Back to programme
         </button>
@@ -165,7 +167,7 @@ export default function CongratsPage() {
       {!reduceMotion && <Confetti />}
 
       <main className="max-w-xl mx-auto w-full px-5 flex-1 flex flex-col justify-center py-10">
-        <motion.p className="text-sm font-bold text-mist mb-3" {...rise(0.05)}>
+        <motion.p className="text-sm font-bold text-secondary mb-3" {...rise(0.05)}>
           Week {weekNum} · {dayName}
         </motion.p>
 
@@ -175,31 +177,31 @@ export default function CongratsPage() {
         >
           Nice
           <br />
-          <span className="text-mint">work.</span>
+          <span className="text-primary">work.</span>
         </motion.h1>
 
         <motion.div
-          className="bg-zest text-court-deep rounded-3xl p-6 mt-6"
+          className="bg-accent text-surface-deep rounded-3xl p-6 mt-6"
           initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.22 }}
         >
-          <div className="grid grid-cols-3 divide-x divide-court-deep/15">
+          <div className="grid grid-cols-3 divide-x divide-surface-deep/15">
             <div className="pr-4">
-              <p className="text-xs font-bold text-court-deep/60">Duration</p>
+              <p className="text-xs font-bold text-surface-deep/60">Duration</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {state ? formatElapsed(state.elapsed) : '—'}
               </p>
             </div>
             <div className="px-4">
-              <p className="text-xs font-bold text-court-deep/60">Volume</p>
+              <p className="text-xs font-bold text-surface-deep/60">Volume</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {state ? `${Math.round(state.volume).toLocaleString()}` : '—'}
-                {state && <span className="text-sm font-bold ml-0.5 text-court-deep/70">kg</span>}
+                {state && <span className="text-sm font-bold ml-0.5 text-surface-deep/70">kg</span>}
               </p>
             </div>
             <div className="pl-4">
-              <p className="text-xs font-bold text-court-deep/60">Sets</p>
+              <p className="text-xs font-bold text-surface-deep/60">Sets</p>
               <p className="text-2xl font-bold tabular-nums tracking-[-0.03em] mt-1.5">
                 {state ? `${state.setsDone}/${state.totalSets}` : '—'}
               </p>
@@ -210,17 +212,17 @@ export default function CongratsPage() {
         <motion.div className="mt-4" {...rise(0.3)}>
           <MonthCalendar monthDate={new Date(now.getFullYear(), now.getMonth(), 1)} history={history} />
           {streak > 0 && (
-            <p className="text-base font-bold text-zest mt-3.5 text-center">
-              🔥 <span className="text-flame">{streak} week streak</span>
+            <p className="text-base font-bold text-accent mt-3.5 text-center">
+              🔥 <span className="text-danger">{streak} week streak</span>
             </p>
           )}
-          {copy && <p className="text-sm text-mist text-center mt-1.5">{copy}</p>}
+          {copy && <p className="text-sm text-secondary text-center mt-1.5">{copy}</p>}
         </motion.div>
 
         {state && (
           <motion.button
             onClick={openPreview}
-            className="mt-7 w-full bg-mint text-court-deep font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98] flex items-center justify-center gap-2"
+            className="mt-7 w-full bg-primary text-surface-deep font-bold text-base py-4 rounded-full transition-transform active:scale-[0.98] flex items-center justify-center gap-2"
             {...rise(0.38)}
           >
             <Share className="w-5 h-5" />
@@ -251,7 +253,7 @@ export default function CongratsPage() {
             />
             <button
               onClick={sharePreview}
-              className="w-full bg-mint text-court-deep font-bold text-sm py-3.5 rounded-xl mt-5 transition-transform active:scale-[0.98]"
+              className="w-full bg-primary text-surface-deep font-bold text-sm py-3.5 rounded-xl mt-5 transition-transform active:scale-[0.98]"
             >
               Share
             </button>
@@ -266,7 +268,7 @@ export default function CongratsPage() {
                 hapticTap();
                 closePreview();
               }}
-              className="w-full text-mist font-bold text-sm py-3 mt-1"
+              className="w-full text-secondary font-bold text-sm py-3 mt-1"
             >
               Close
             </button>

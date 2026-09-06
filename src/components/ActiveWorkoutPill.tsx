@@ -53,11 +53,11 @@ export function ActiveWorkoutPill() {
               hapticTap();
               navigate(`/workout/${session.dayId}`);
             }}
-            className="pointer-events-auto flex items-center gap-2.5 bg-mint text-court-deep font-bold text-sm pl-4 pr-5 py-3 rounded-full shadow-xl transition-transform active:scale-95"
+            className="pointer-events-auto flex items-center gap-2.5 bg-primary text-surface-deep font-bold text-sm pl-4 pr-5 py-3 rounded-full shadow-xl transition-transform active:scale-95"
           >
             <span className="relative flex w-2.5 h-2.5">
-              <span className="absolute inline-flex w-full h-full rounded-full bg-court-deep/40 animate-ping" />
-              <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-court-deep" />
+              <span className="absolute inline-flex w-full h-full rounded-full bg-surface-deep/40 animate-ping" />
+              <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-surface-deep" />
             </span>
             {title} · <span className="tabular-nums">{formatElapsed(elapsed)}</span>
           </button>

@@ -264,6 +264,7 @@ test.describe('B — profile history', () => {
     await expect(page.getByText(monthLabel)).toBeVisible();
     await expect(page.getByText(/No workouts saved yet/)).toBeVisible();
     await expect(page.getByText(/week streak/)).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: 'Rest notifications' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Preferences' })).toBeVisible();
+    await expect(page.getByText('Rest notifications')).toBeVisible();
   });
 });
