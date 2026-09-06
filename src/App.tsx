@@ -13,7 +13,7 @@ import { TabBar } from './components/TabBar';
 function NotFound() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-3">
-      <p className="text-mist">Page not found.</p>
+      <p className="text-secondary">Page not found.</p>
       <Link to="/" className="text-white font-bold underline">
         Back to home
       </Link>

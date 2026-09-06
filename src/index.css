@@ -1,20 +1,26 @@
 @import "tailwindcss";
 
+/*
+ * Semantic tokens. Values below are the "Court" default theme; other themes
+ * override these custom properties at runtime (src/lib/themes.ts sets them as
+ * inline style props on <html>, and a boot script in index.html restores the
+ * saved theme before first paint). Themes must keep grounds dark: every
+ * surface in the app is a white-opacity overlay and all text is white-based.
+ */
 @theme {
   --font-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-  /* GO Club-inspired palette */
-  --color-court: #2a2ae0; /* ultramarine app background */
-  --color-court-deep: #1e1eb8; /* pressed / recessed surfaces */
-  --color-flame: #ff3d2e; /* red-orange display accent */
-  --color-mint: #7bf1a8; /* progress + completed */
-  --color-zest: #f7e353; /* small meta highlights */
-  --color-mist: #b9b9f2; /* secondary text on blue */
+  --color-surface: #2a2ae0; /* app background */
+  --color-surface-deep: #1e1eb8; /* pressed / recessed surfaces */
+  --color-danger: #ff3d2e; /* display pop, destructive, failure sets, streak */
+  --color-primary: #7bf1a8; /* progress, done, primary actions */
+  --color-accent: #f7e353; /* small meta highlights, warm-up sets */
+  --color-secondary: #b9b9f2; /* secondary text on the ground */
 }
 
 @layer base {
   body {
-    @apply bg-court text-white antialiased;
+    @apply bg-surface text-white antialiased;
     letter-spacing: -0.01em;
   }
 

@@ -7,7 +7,7 @@ import { hapticTap } from '../lib/feedback';
 const DAY_INITIALS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 /**
- * Month grid of saved workouts: mint discs on saved days, a ring on today.
+ * Month grid of saved workouts: primary discs on saved days, a ring on today.
  * Pass `onNavigate` (Profile) for prev/next month arrows; without it (congrats)
  * the calendar is a fixed view of the given month.
  */
@@ -53,7 +53,7 @@ export const MonthCalendar: React.FC<{
 
       <div className="grid grid-cols-7 gap-y-1.5 text-center">
         {DAY_INITIALS.map((d, i) => (
-          <span key={i} className="text-[0.625rem] font-bold text-mist" aria-hidden>
+          <span key={i} className="text-[0.625rem] font-bold text-secondary" aria-hidden>
             {d}
           </span>
         ))}
@@ -70,7 +70,7 @@ export const MonthCalendar: React.FC<{
             className={cn(
               'w-8 h-8 mx-auto rounded-full flex items-center justify-center text-xs font-bold tabular-nums',
               !cell.inMonth && 'text-white/20',
-              cell.inMonth && (cell.saved ? 'bg-mint text-court-deep' : 'text-white/80'),
+              cell.inMonth && (cell.saved ? 'bg-primary text-surface-deep' : 'text-white/80'),
               cell.inMonth && cell.today && 'ring-2 ring-white/70'
             )}
           >

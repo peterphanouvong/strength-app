@@ -103,7 +103,7 @@ export function foldSetLog(
   }
 
   // reps-tracked: an explicit rep count is required — the prescription is a
-  // target, not a performance, so it can never mint a best by itself.
+  // target, not a performance, so it can never primary a best by itself.
   const reps = parseInt(log.actualReps || '', 10);
   if (!(reps > 0)) return bests;
   const best = current?.bestReps;

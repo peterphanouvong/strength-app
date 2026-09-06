@@ -42,8 +42,8 @@ const BLOCK_TAGLINES: Record<string, string> = {
 
 export const BLOCK_TEXT_COLOR: Record<string, string> = {
   Rebuild: 'text-white',
-  Load: 'text-zest',
-  Convert: 'text-mint',
+  Load: 'text-accent',
+  Convert: 'text-primary',
 };
 
 export default function WeeksPage() {
@@ -63,13 +63,13 @@ export default function WeeksPage() {
       <main className="max-w-xl mx-auto px-5 pt-10 pb-32">
         {/* Hero */}
         <motion.header className="mb-10" {...rise(0)}>
-          <p className="text-sm font-bold text-zest mb-3">Volleyball Strength</p>
+          <p className="text-sm font-bold text-accent mb-3">Volleyball Strength</p>
           <h1 className="text-[3.25rem] leading-[0.95] font-bold tracking-[-0.035em]">
             12-week
             <br />
             programme
           </h1>
-          <p className="text-sm text-mist mt-4">
+          <p className="text-sm text-secondary mt-4">
             Strength &amp; power for volleyball. Pick a week to train.
           </p>
         </motion.header>
@@ -92,7 +92,7 @@ export default function WeeksPage() {
                     Block {block.numeral} · {block.range}
                   </span>
                 </div>
-                <p className="text-xs font-medium text-mist mt-2.5">
+                <p className="text-xs font-medium text-secondary mt-2.5">
                   {BLOCK_TAGLINES[block.name]}
                 </p>
               </motion.div>
@@ -129,19 +129,19 @@ const WeekRow: React.FC<{ week: WeekPlan; completedSets: ProgressMap }> = ({ wee
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {done ? (
-            <span className="w-8 h-8 rounded-full bg-mint text-court-deep flex items-center justify-center">
+            <span className="w-8 h-8 rounded-full bg-primary text-surface-deep flex items-center justify-center">
               <Check className="w-4 h-4" strokeWidth={3} />
             </span>
           ) : progress.percentage > 0 ? (
-            <span className="text-sm font-bold text-mint tabular-nums">{progress.percentage}%</span>
+            <span className="text-sm font-bold text-primary tabular-nums">{progress.percentage}%</span>
           ) : null}
-          <ChevronRight className="w-5 h-5 text-mist" />
+          <ChevronRight className="w-5 h-5 text-secondary" />
         </div>
       </div>
       {progress.percentage > 0 && (
-        <div className="mt-3.5 h-2 rounded-full bg-court-deep/60 overflow-hidden">
+        <div className="mt-3.5 h-2 rounded-full bg-surface-deep/60 overflow-hidden">
           <div
-            className="h-full rounded-full bg-mint transition-all duration-500"
+            className="h-full rounded-full bg-primary transition-all duration-500"
             style={{ width: `${progress.percentage}%` }}
           />
         </div>

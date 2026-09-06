@@ -121,10 +121,11 @@ test.describe('A — profile skeleton', () => {
   test('heading + rest-notification permission control', async ({ page }) => {
     await page.goto('/profile');
     await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Rest notifications' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Preferences' })).toBeVisible();
+    await expect(page.getByText('Rest notifications')).toBeVisible();
     // One of the three permission states renders (button / on / blocked).
     await expect(
-      page.getByText(/Notify me when rest ends|Notifications on|Notifications are blocked/)
+      page.getByText(/Turn on|^On$|Blocked in settings|Not supported/)
     ).toBeVisible();
   });
 });
