@@ -20,7 +20,7 @@ export const BottomSheet: React.FC<{
               backdrop keeps swallowing taps — and re-firing onClose — for the ~300ms exit. */}
           <motion.button
             aria-label="Close"
-            className="absolute inset-0 bg-surface-deep/70"
+            className="absolute inset-0 bg-black/60"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1, pointerEvents: 'auto' }}
             exit={{ opacity: 0, pointerEvents: 'none' }}
@@ -33,13 +33,13 @@ export const BottomSheet: React.FC<{
           <motion.div
             role="dialog"
             aria-label={subtitle ? `${title} · ${subtitle}` : title}
-            className="absolute bottom-0 inset-x-0 bg-surface border-t border-white/15 rounded-t-3xl px-5 pt-3 pb-8 max-w-xl mx-auto shadow-[0_-16px_48px_rgba(0,0,0,0.35)]"
+            className="absolute bottom-0 inset-x-0 bg-surface border-t border-ink/15 rounded-t-3xl px-5 pt-3 pb-8 max-w-xl mx-auto shadow-[0_-16px_48px_rgba(0,0,0,0.35)]"
             initial={{ y: '100%' }}
             animate={{ y: 0, pointerEvents: 'auto' }}
             exit={{ y: '100%', pointerEvents: 'none' }}
             transition={{ type: 'spring', stiffness: 400, damping: 38 }}
           >
-            <div className="w-9 h-1 rounded-full bg-white/25 mx-auto mb-4" />
+            <div className="w-9 h-1 rounded-full bg-ink/25 mx-auto mb-4" />
             <div className="text-center mb-5">
               <h3 className="font-bold text-lg leading-snug tracking-[-0.02em]">{title}</h3>
               {subtitle && (

@@ -24,13 +24,13 @@ export const MonthCalendar: React.FC<{
   };
 
   return (
-    <div className="bg-white/10 rounded-2xl px-4 py-4" role="group" aria-label={`Calendar · ${label}`}>
+    <div className="bg-ink/10 rounded-2xl px-4 py-4" role="group" aria-label={`Calendar · ${label}`}>
       <div className="flex items-center justify-between mb-3">
         {onNavigate ? (
           <button
             onClick={() => shift(-1)}
             aria-label="Previous month"
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-full bg-ink/10 hover:bg-ink/20 flex items-center justify-center transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -42,7 +42,7 @@ export const MonthCalendar: React.FC<{
           <button
             onClick={() => shift(1)}
             aria-label="Next month"
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-full bg-ink/10 hover:bg-ink/20 flex items-center justify-center transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -69,9 +69,9 @@ export const MonthCalendar: React.FC<{
             }
             className={cn(
               'w-8 h-8 mx-auto rounded-full flex items-center justify-center text-xs font-bold tabular-nums',
-              !cell.inMonth && 'text-white/20',
-              cell.inMonth && (cell.saved ? 'bg-primary text-surface-deep' : 'text-white/80'),
-              cell.inMonth && cell.today && 'ring-2 ring-white/70'
+              !cell.inMonth && 'text-ink/20',
+              cell.inMonth && (cell.saved ? 'bg-primary text-onfill' : 'text-ink/80'),
+              cell.inMonth && cell.today && 'ring-2 ring-ink/70'
             )}
           >
             {cell.date.getDate()}

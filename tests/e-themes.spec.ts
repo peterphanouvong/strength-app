@@ -64,6 +64,29 @@ test.describe('themes', () => {
     expect(await bodyBg(page)).toBe(COURT_BG);
   });
 
+  test('Paper (light) theme: light ground, dark text, orange primary — readable end to end', async ({ page }) => {
+    await page.goto('/profile');
+    await page.getByRole('button', { name: /^Theme/ }).click();
+    const sheet = page.getByRole('dialog', { name: 'Theme' });
+    await sheet.getByRole('button', { name: /Paper/ }).click();
+    expect(await bodyBg(page)).toBe('rgb(245, 240, 232)'); // #f5f0e8
+    // Ink flips to near-black: body text color follows.
+    const bodyColor = await page.evaluate(() => getComputedStyle(document.body).color);
+    expect(bodyColor).toBe('rgb(24, 19, 16)'); // #181310
+
+    await page.reload();
+    expect(await bodyBg(page)).toBe('rgb(245, 240, 232)');
+
+    // A workout under Paper: completed check tile uses the orange primary.
+    await page.goto('/workout/w1-d1');
+    await page.getByRole('button', { name: 'Start workout' }).click();
+    await page.getByRole('button', { name: 'Mark set complete' }).first().click();
+    await expect(page.getByRole('button', { name: 'Mark set incomplete' }).first()).toHaveCSS(
+      'background-color',
+      'rgb(224, 82, 6)' // #e05206
+    );
+  });
+
   test('corrupt theme storage falls back to Court without crashing', async ({ page }) => {
     await page.addInitScript(() => window.localStorage.setItem('vb-theme-v1', '{not json'));
     await page.goto('/');

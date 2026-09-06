@@ -41,7 +41,7 @@ const BLOCK_TAGLINES: Record<string, string> = {
 };
 
 export const BLOCK_TEXT_COLOR: Record<string, string> = {
-  Rebuild: 'text-white',
+  Rebuild: 'text-ink',
   Load: 'text-accent',
   Convert: 'text-primary',
 };
@@ -77,7 +77,7 @@ export default function WeeksPage() {
         {/* Blocks */}
         <div className="space-y-10">
           {blocks.map((block, blockIndex) => (
-            <section key={block.name} className="border-t border-dashed border-white/25 pt-8">
+            <section key={block.name} className="border-t border-dashed border-ink/25 pt-8">
               <motion.div className="mb-5" {...rise(0.1 + blockIndex * 0.08)}>
                 <div className="flex items-baseline justify-between gap-3">
                   <h2
@@ -88,7 +88,7 @@ export default function WeeksPage() {
                   >
                     {block.name}
                   </h2>
-                  <span className="text-xs font-bold text-white/70 tabular-nums flex-shrink-0">
+                  <span className="text-xs font-bold text-ink/70 tabular-nums flex-shrink-0">
                     Block {block.numeral} · {block.range}
                   </span>
                 </div>
@@ -120,16 +120,16 @@ const WeekRow: React.FC<{ week: WeekPlan; completedSets: ProgressMap }> = ({ wee
     <Link
       to={`/week/${week.weekNumber}`}
       onClick={hapticSelect}
-      className="block bg-white/10 rounded-2xl px-5 py-4 transition-transform active:scale-[0.98] hover:bg-white/15"
+      className="block bg-ink/10 rounded-2xl px-5 py-4 transition-transform active:scale-[0.98] hover:bg-ink/15"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h3 className="text-lg font-bold tracking-[-0.02em]">Week {week.weekNumber}</h3>
-          <p className="text-xs leading-snug text-white/80 line-clamp-2 mt-1">{week.focus}</p>
+          <p className="text-xs leading-snug text-ink/80 line-clamp-2 mt-1">{week.focus}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {done ? (
-            <span className="w-8 h-8 rounded-full bg-primary text-surface-deep flex items-center justify-center">
+            <span className="w-8 h-8 rounded-full bg-primary text-onfill flex items-center justify-center">
               <Check className="w-4 h-4" strokeWidth={3} />
             </span>
           ) : progress.percentage > 0 ? (

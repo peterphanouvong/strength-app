@@ -35,7 +35,7 @@ export function TabBar() {
 
   return (
     <nav aria-label="Main" className="fixed bottom-4 inset-x-4 z-30">
-      <div className="max-w-xl mx-auto bg-surface-deep/95 backdrop-blur-md border border-white/15 rounded-full px-3 py-2 shadow-xl grid grid-cols-3">
+      <div className="max-w-xl mx-auto bg-surface-deep/95 backdrop-blur-md border border-ink/15 rounded-full px-3 py-2 shadow-xl grid grid-cols-3">
         {TABS.map((tab) => {
           const active = tab.isActive(location.pathname);
           return (
@@ -46,7 +46,7 @@ export function TabBar() {
               aria-current={active ? 'page' : undefined}
               className={cn(
                 'flex flex-col items-center gap-0.5 py-1 rounded-full transition-colors',
-                active ? 'text-primary' : 'text-secondary hover:text-white'
+                active ? 'text-primary' : 'text-secondary hover:text-ink'
               )}
             >
               <tab.icon className="w-5 h-5" strokeWidth={active ? 2.5 : 2} />

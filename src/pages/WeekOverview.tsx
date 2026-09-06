@@ -12,10 +12,10 @@ import { useEntranceOnce } from '../lib/animation';
 
 // Poster panel palettes, cycled per day
 const POSTERS = [
-  'bg-accent text-surface-deep',
-  'bg-primary text-surface-deep',
-  'bg-white text-surface',
-  'bg-secondary text-surface-deep',
+  'bg-accent text-onfill',
+  'bg-primary text-onfill',
+  'bg-ink text-surface',
+  'bg-secondary text-onfill',
 ];
 
 function posterWords(title: string): string[] {
@@ -34,7 +34,7 @@ export default function WeekOverview() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
         <p className="text-secondary">Week not found.</p>
-        <Link to="/programme" className="text-white font-bold underline">
+        <Link to="/programme" className="text-ink font-bold underline">
           Back to programme
         </Link>
       </div>
@@ -54,11 +54,11 @@ export default function WeekOverview() {
               navigate('/programme');
             }}
             aria-label="Back to programme"
-            className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            className="w-10 h-10 rounded-full bg-ink/10 hover:bg-ink/20 flex items-center justify-center transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="text-xs font-bold text-white/70 tabular-nums">
+          <span className="text-xs font-bold text-ink/70 tabular-nums">
             Block {week.block.charAt(0)} · {blockName}
           </span>
         </div>
@@ -77,7 +77,7 @@ export default function WeekOverview() {
             {blockName}
           </h2>
           <WeekInfoTabs week={week} />
-          <div className="border-t border-dashed border-white/25 mt-6" />
+          <div className="border-t border-dashed border-ink/25 mt-6" />
         </header>
 
         {/* Day cards */}
@@ -115,7 +115,7 @@ const WeekInfoTabs: React.FC<{ week: (typeof TRAINING_PLAN)[number] }> = ({ week
             }}
             className={cn(
               'px-3 py-2 rounded-full text-xs font-bold transition-colors',
-              active === tab.id ? 'bg-white text-surface' : 'bg-white/10 text-secondary hover:bg-white/20'
+              active === tab.id ? 'bg-ink text-surface' : 'bg-ink/10 text-secondary hover:bg-ink/20'
             )}
           >
             {tab.label}
@@ -132,7 +132,7 @@ const WeekInfoTabs: React.FC<{ week: (typeof TRAINING_PLAN)[number] }> = ({ week
           exit={{ opacity: 0, y: -4 }}
           transition={{ duration: 0.18 }}
         >
-          {active === 'week' && <p className="text-white font-medium">{week.focus}</p>}
+          {active === 'week' && <p className="text-ink font-medium">{week.focus}</p>}
           {active === 'goal' && <p className="text-secondary">{week.blockNote}</p>}
           {active === 'jumps' && <p className="text-secondary">{week.jumpsNote}</p>}
           {active === 'season' && (
@@ -177,7 +177,7 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
     {/* Stretched-link card: the Link covers the whole card (→ preview); the
         Start/Resume pill is a sibling button layered above it, so there are no
         nested interactive elements. */}
-    <div className="relative flex bg-white/10 rounded-2xl overflow-hidden transition-transform active:scale-[0.98] hover:bg-white/15">
+    <div className="relative flex bg-ink/10 rounded-2xl overflow-hidden transition-transform active:scale-[0.98] hover:bg-ink/15">
       <Link
         to={`/workout/${day.id}`}
         onClick={hapticSelect}
@@ -211,7 +211,7 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
         <div className="flex items-center justify-between gap-2">
           <p className="text-[0.6875rem] font-bold text-secondary">{letter}</p>
           {done ? (
-            <span className="w-6 h-6 rounded-full bg-primary text-surface-deep flex items-center justify-center flex-shrink-0">
+            <span className="w-6 h-6 rounded-full bg-primary text-onfill flex items-center justify-center flex-shrink-0">
               <Check className="w-3.5 h-3.5" strokeWidth={3} />
             </span>
           ) : (
@@ -223,7 +223,7 @@ const DayCard: React.FC<{ day: WorkoutDay; index: number; completedSets: Progres
               aria-label={`${started ? 'Resume' : 'Start'} ${name}`}
               className={cn(
                 'relative z-10 flex items-center gap-1.5 text-[0.6875rem] font-bold px-3 py-1.5 rounded-full flex-shrink-0 transition-transform active:scale-95',
-                started ? 'bg-accent text-surface-deep' : 'bg-primary text-surface-deep'
+                started ? 'bg-accent text-onfill' : 'bg-primary text-onfill'
               )}
             >
               <Play className="w-3 h-3 fill-current" />

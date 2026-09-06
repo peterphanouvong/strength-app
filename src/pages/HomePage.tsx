@@ -92,7 +92,7 @@ export default function HomePage() {
           </h1>
           <p className="text-sm text-secondary mt-4">Strength &amp; power for volleyball.</p>
           {streak > 0 && (
-            <span className="inline-flex items-center gap-1.5 bg-white/10 rounded-full px-3.5 py-2 mt-4 text-sm font-bold">
+            <span className="inline-flex items-center gap-1.5 bg-ink/10 rounded-full px-3.5 py-2 mt-4 text-sm font-bold">
               🔥 <span className="text-danger">{streak} week streak</span>
             </span>
           )}
@@ -106,9 +106,9 @@ export default function HomePage() {
                   hapticSelect();
                   navigate(`/workout/${session.dayId}`);
                 }}
-                className="w-full bg-primary text-surface-deep rounded-2xl px-5 py-4 text-left transition-transform active:scale-[0.98]"
+                className="w-full bg-primary text-onfill rounded-2xl px-5 py-4 text-left transition-transform active:scale-[0.98]"
               >
-                <p className="text-[0.6875rem] font-bold text-surface-deep/60">
+                <p className="text-[0.6875rem] font-bold text-onfill/60">
                   Workout in progress · <span className="tabular-nums">{formatElapsed(elapsed)}</span>
                 </p>
                 <div className="flex items-center justify-between gap-3 mt-1">
@@ -128,7 +128,7 @@ export default function HomePage() {
             <Link
               to={`/week/${currentWeek.weekNumber}`}
               onClick={hapticSelect}
-              className="block bg-white/10 rounded-2xl px-5 py-4 hover:bg-white/15 transition-transform active:scale-[0.98]"
+              className="block bg-ink/10 rounded-2xl px-5 py-4 hover:bg-ink/15 transition-transform active:scale-[0.98]"
             >
               <p className="text-[0.6875rem] font-bold text-secondary">Current week</p>
               <div className="flex items-center justify-between gap-3 mt-1">
@@ -137,7 +137,7 @@ export default function HomePage() {
                 </h2>
                 <ChevronRight className="w-5 h-5 text-secondary flex-shrink-0 mr-9" />
               </div>
-              <p className="text-xs leading-snug text-white/80 line-clamp-2 mt-1">
+              <p className="text-xs leading-snug text-ink/80 line-clamp-2 mt-1">
                 {currentWeek.focus}
               </p>
               {weekProgress.completed > 0 && (
@@ -160,7 +160,7 @@ export default function HomePage() {
                 setWeekSheetOpen(true);
               }}
               aria-label="Change current week"
-              className="absolute top-9 right-3.5 w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
+              className="absolute top-9 right-3.5 w-9 h-9 rounded-full hover:bg-ink/10 flex items-center justify-center transition-colors"
             >
               <MoreVertical className="w-4.5 h-4.5 text-secondary" />
             </button>
@@ -206,7 +206,7 @@ export default function HomePage() {
             <h2 className="text-lg font-bold tracking-[-0.02em]">Recent PRs</h2>
             <ul
               aria-label="Recent PRs"
-              className="bg-white/5 rounded-2xl divide-y divide-white/[0.06] overflow-hidden mt-3"
+              className="bg-ink/5 rounded-2xl divide-y divide-ink/[0.06] overflow-hidden mt-3"
             >
               {recentPrs.map((pr) => (
                 <li key={`${pr.exercise}-${pr.label}`} className="flex items-center gap-3 px-4 py-3">
@@ -237,7 +237,7 @@ const WeekOption: React.FC<{
     aria-pressed={selected}
     className={cn(
       'w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-left transition-colors',
-      selected ? 'bg-white/15' : 'hover:bg-white/10'
+      selected ? 'bg-ink/15' : 'hover:bg-ink/10'
     )}
   >
     <span className="flex-1 min-w-0">
