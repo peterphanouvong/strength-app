@@ -1,16 +1,42 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, Medal, Play } from 'lucide-react';
+import { Check, ChevronRight, Medal, MoreVertical, Play } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { TRAINING_PLAN } from '../data';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { PROGRESS_KEY, ProgressMap, getWeekProgress } from '../lib/progress';
 import { useActiveSession } from '../lib/session';
-import { hapticSelect } from '../lib/feedback';
+import { hapticSelect, hapticTap } from '../lib/feedback';
 import { useEntranceOnce } from '../lib/animation';
 import { coerceHistory, getWeekStreak, CompletedWorkout, HISTORY_KEY } from '../lib/history';
 import { getBests, listPrs } from '../lib/bests';
 import { formatElapsed } from './WorkoutPage';
+import { BottomSheet } from '../components/BottomSheet';
+import { BLOCK_TEXT_COLOR } from './WeeksPage';
+import { cn } from '../lib/utils';
+
+const CURRENT_WEEK_KEY = 'vb-current-week-v1';
+
+function readWeekOverride(): number | null {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(CURRENT_WEEK_KEY) ?? 'null');
+    return typeof v === 'number' && v >= 1 && v <= TRAINING_PLAN.length ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+// Not useLocalStorage: "Automatic" must REMOVE the key (the hook can only write
+// JSON values, and a stored "null" is indistinguishable from garbage on read).
+function useWeekOverride() {
+  const [override, setOverride] = useState<number | null>(readWeekOverride);
+  const choose = (n: number | null) => {
+    if (n === null) window.localStorage.removeItem(CURRENT_WEEK_KEY);
+    else window.localStorage.setItem(CURRENT_WEEK_KEY, JSON.stringify(n));
+    setOverride(n);
+  };
+  return [override, choose] as const;
+}
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -30,8 +56,11 @@ export default function HomePage() {
   // First read bootstraps vb-personal-bests-v1 from the progress map (spec, phase C).
   const [recentPrs] = useState(() => listPrs(getBests()).slice(0, 3));
 
-  // Resume point: the first week that still has incomplete sets.
+  // Resume point: manual override if set, else the first week with incomplete sets.
+  const [weekOverride, chooseWeek] = useWeekOverride();
+  const [weekSheetOpen, setWeekSheetOpen] = useState(false);
   const currentWeek =
+    (weekOverride !== null ? TRAINING_PLAN.find((w) => w.weekNumber === weekOverride) : undefined) ??
     TRAINING_PLAN.find((w) => getWeekProgress(w, completedSets).percentage < 100) ??
     TRAINING_PLAN[TRAINING_PLAN.length - 1];
   const weekProgress = getWeekProgress(currentWeek, completedSets);
@@ -95,7 +124,7 @@ export default function HomePage() {
             </motion.div>
           )}
 
-          <motion.div {...rise(session ? 0.15 : 0.08)}>
+          <motion.div {...rise(session ? 0.15 : 0.08)} className="relative">
             <Link
               to={`/week/${currentWeek.weekNumber}`}
               onClick={hapticSelect}
@@ -106,7 +135,7 @@ export default function HomePage() {
                 <h2 className="text-lg font-bold tracking-[-0.02em]">
                   Week {currentWeek.weekNumber}
                 </h2>
-                <ChevronRight className="w-5 h-5 text-mist flex-shrink-0" />
+                <ChevronRight className="w-5 h-5 text-mist flex-shrink-0 mr-9" />
               </div>
               <p className="text-xs leading-snug text-white/80 line-clamp-2 mt-1">
                 {currentWeek.focus}
@@ -125,8 +154,52 @@ export default function HomePage() {
                 </div>
               )}
             </Link>
+            <button
+              onClick={() => {
+                hapticTap();
+                setWeekSheetOpen(true);
+              }}
+              aria-label="Change current week"
+              className="absolute top-9 right-3.5 w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors"
+            >
+              <MoreVertical className="w-4.5 h-4.5 text-mist" />
+            </button>
           </motion.div>
         </div>
+
+        {/* Set current week sheet */}
+        <BottomSheet
+          open={weekSheetOpen}
+          onClose={() => setWeekSheetOpen(false)}
+          title="Set current week"
+        >
+          <div className="max-h-[60vh] overflow-y-auto -mx-1 px-1 space-y-1">
+            <WeekOption
+              label="Automatic"
+              hint="Based on your progress"
+              selected={weekOverride === null}
+              onPick={() => {
+                hapticSelect();
+                chooseWeek(null);
+                setWeekSheetOpen(false);
+              }}
+            />
+            {TRAINING_PLAN.map((week) => (
+              <WeekOption
+                key={week.id}
+                label={`Week ${week.weekNumber}`}
+                labelClass={BLOCK_TEXT_COLOR[week.block.substring(4)]}
+                hint={week.focus}
+                selected={weekOverride === week.weekNumber}
+                onPick={() => {
+                  hapticSelect();
+                  chooseWeek(week.weekNumber);
+                  setWeekSheetOpen(false);
+                }}
+              />
+            ))}
+          </div>
+        </BottomSheet>
 
         {recentPrs.length > 0 && (
           <motion.section className="mt-8" {...rise(session ? 0.22 : 0.15)}>
@@ -151,3 +224,26 @@ export default function HomePage() {
     </div>
   );
 }
+
+const WeekOption: React.FC<{
+  label: string;
+  hint: string;
+  selected: boolean;
+  labelClass?: string;
+  onPick: () => void;
+}> = ({ label, hint, selected, labelClass, onPick }) => (
+  <button
+    onClick={onPick}
+    aria-pressed={selected}
+    className={cn(
+      'w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-left transition-colors',
+      selected ? 'bg-white/15' : 'hover:bg-white/10'
+    )}
+  >
+    <span className="flex-1 min-w-0">
+      <span className={cn('block font-bold text-sm', labelClass)}>{label}</span>
+      <span className="block text-xs text-mist truncate">{hint}</span>
+    </span>
+    {selected && <Check className="w-4 h-4 text-mint flex-shrink-0" strokeWidth={3} />}
+  </button>
+);
