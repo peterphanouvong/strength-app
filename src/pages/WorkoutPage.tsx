@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, Check, Timer, Plus, X, History, Medal, MoreVertical } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { TRAINING_PLAN, WorkoutDay, Exercise } from '../data';
@@ -222,6 +222,18 @@ export default function WorkoutPage() {
     unlockAudio();
     begin();
   };
+
+  // Quick start from a week-overview card pill: begin immediately, through the
+  // same path as the Start CTA (so a conflicting session raises the sheet).
+  // The flag is cleared from history first so reload/back never re-triggers.
+  const location = useLocation();
+  const autostart = Boolean((location.state as { autostart?: boolean } | null)?.autostart);
+  useEffect(() => {
+    if (!autostart || live) return;
+    navigate(location.pathname, { replace: true });
+    startWorkout();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autostart]);
 
   const finishWorkout = () => {
     if (progress.completed === 0) {
