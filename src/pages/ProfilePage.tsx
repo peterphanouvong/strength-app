@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { Check, ChevronRight, Medal } from 'lucide-react';
 import {
@@ -113,12 +114,19 @@ export default function ProfilePage() {
               className="bg-ink/5 rounded-2xl divide-y divide-ink/[0.06] overflow-hidden mt-3"
             >
               {prs.map((pr) => (
-                <li key={`${pr.exercise}-${pr.label}`} className="flex items-center gap-3 px-4 py-3">
-                  <Medal className="w-4 h-4 text-accent flex-shrink-0" />
-                  <p className="font-bold tracking-[-0.02em] text-sm min-w-0 truncate flex-1">
-                    {pr.exercise}
-                  </p>
-                  <p className="text-sm font-bold text-accent tabular-nums flex-shrink-0">{pr.label}</p>
+                <li key={`${pr.exercise}-${pr.label}`}>
+                  <Link
+                    to={`/exercise/${encodeURIComponent(pr.exercise)}`}
+                    onClick={hapticTap}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-ink/5 transition-colors"
+                  >
+                    <Medal className="w-4 h-4 text-accent flex-shrink-0" />
+                    <p className="font-bold tracking-[-0.02em] text-sm min-w-0 truncate flex-1">
+                      {pr.exercise}
+                    </p>
+                    <p className="text-sm font-bold text-accent tabular-nums flex-shrink-0">{pr.label}</p>
+                    <ChevronRight className="w-4 h-4 text-secondary flex-shrink-0" />
+                  </Link>
                 </li>
               ))}
             </ul>

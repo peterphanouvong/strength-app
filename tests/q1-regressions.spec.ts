@@ -225,7 +225,10 @@ test.describe('Q1 — second tab does not clobber first tab’s logged sets', ()
 // Q1 — reps placeholders must not mangle non-numeric prescriptions. Pre-fix,
 // `exercise.reps.replace(/[^0-9-]/g, '')` kept hyphens and concatenated every
 // digit, so 'Max-2' (w1-d4 Pull-Ups) rendered a '-2' placeholder and
-// '8 / 30 s' (w5-d1 Ab Wheel or Hollow Hold) rendered '830'.
+// '8 / 30 s' rendered '830'. The '8 / 30 s' prescription has since left the
+// plan; '8/leg' (w1-d1 Bulgarian Split Squat) covers the same trailing-junk
+// case — pre-fix it rendered '8' by luck of no second digit group, but the
+// guard is that only the leading number survives.
 
 test.describe('Q1 — reps placeholder does not mangle non-numeric prescriptions', () => {
   const exerciseSection = (p: Page, name: string) =>
@@ -240,9 +243,9 @@ test.describe('Q1 — reps placeholder does not mangle non-numeric prescriptions
     }
   });
 
-  test("w5-d1 Ab Wheel ('8 / 30 s') placeholder is '8', never '830'", async ({ page }) => {
-    await page.goto('/workout/w5-d1');
-    const inputs = exerciseSection(page, 'Ab Wheel or Hollow Hold').locator('input[inputmode="numeric"]');
+  test("w1-d1 Bulgarian Split Squat ('8/leg') placeholder is '8', never '8leg' junk", async ({ page }) => {
+    await page.goto('/workout/w1-d1');
+    const inputs = exerciseSection(page, 'Bulgarian Split Squat').locator('input[inputmode="numeric"]');
     await expect(inputs.first()).toBeVisible();
     for (const input of await inputs.all()) {
       await expect(input).toHaveAttribute('placeholder', '8');

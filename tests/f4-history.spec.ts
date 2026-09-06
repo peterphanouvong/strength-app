@@ -22,7 +22,7 @@ async function openHistorySheet(page: Page, buttonName: RegExp, sheetTitle: stri
 }
 
 test.describe('F4 — exercise history + progression placeholders', () => {
-  test('seed 3 weeks of Back Squat logs (80/85/90): on /workout/w4-d1 the Previous column and input placeholders show week-3 values', async ({
+  test('seed 3 weeks of Back Squat logs (80/85/90): on /workout/w4-d1 the input placeholders show week-3 values', async ({
     page,
   }) => {
     await seedStorage(page, { progress: squatHistory3Weeks() });
@@ -31,13 +31,9 @@ test.describe('F4 — exercise history + progression placeholders', () => {
 
     const squat = exerciseSection(page, /Back Squat/);
 
-    // Previous column: every one of the 3 deload rows shows the week-3 log
-    // (90 kg × 6) — the most recent prior completed — not week 1 or 2.
-    await expect(squat.getByText('90kg × 6')).toHaveCount(3);
-    await expect(squat.getByText('80kg × 6')).toHaveCount(0);
-    await expect(squat.getByText('85kg × 6')).toHaveCount(0);
-
-    // Input placeholders mirror the week-3 values for each set row.
+    // Placeholders carry the previous session: every one of the 3 deload rows
+    // shows the week-3 log (90 kg × 6) — the most recent prior completed — not
+    // week 1 or 2. (There is no separate Previous column; the inputs are it.)
     const weightInputs = squat.locator('input[inputmode="decimal"]');
     const repsInputs = squat.locator('input[inputmode="numeric"]');
     await expect(weightInputs).toHaveCount(3);
@@ -119,9 +115,6 @@ test.describe('F4 — exercise history + progression placeholders', () => {
     await expect(page.getByRole('heading', { name: /Back Squat/ })).toBeVisible();
 
     const squat = exerciseSection(page, /Back Squat/);
-
-    // Previous column falls back to the em-dash for every row (4 sets in week 1).
-    await expect(squat.getByText('—', { exact: true })).toHaveCount(4);
 
     // Weight placeholder falls back to "—"; reps placeholder falls back to the
     // prescribed target reps (6 for week-1 Back Squat).

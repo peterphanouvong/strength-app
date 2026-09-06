@@ -7,6 +7,7 @@ import WorkoutPage from './pages/WorkoutPage';
 import CompletionPage from './pages/CompletionPage';
 import CongratsPage from './pages/CongratsPage';
 import ProfilePage from './pages/ProfilePage';
+import ExercisePage from './pages/ExercisePage';
 import { ActiveWorkoutPill } from './components/ActiveWorkoutPill';
 import { TabBar } from './components/TabBar';
 
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="/complete/:id" element={<CompletionPage />} />
         <Route path="/congrats/:id" element={<CongratsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/exercise/:name" element={<ExercisePage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <ActiveWorkoutPill />

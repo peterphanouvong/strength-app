@@ -190,8 +190,8 @@ const buildBlock2Days = (w: number): WorkoutDay[] => {
       exercises: [
         ex(w, 1, 1, { name: 'Hang Power Clean', sets: clean.sets, reps: clean.reps, load: clean.load, restSec: 180 }),
         ex(w, 1, 2, { name: 'Back Squat', sets: main.sets, reps: main.reps, load: main.load, restSec: 180, notes: main.notes }),
-        ex(w, 1, 3, { name: 'Trap Bar Deadlift', sets: 3, reps: '5', load: 'RPE 8', restSec: 180, notes: 'Handles high, hips a touch lower than a conventional pull. Loads the posterior chain without stacking spinal fatigue on the squat.' }),
-        ex(w, 1, 4, { name: 'Ab Wheel or Hollow Hold', sets: 3, reps: '8 / 30 s', tracking: 'reps', restSec: 60 }),
+        ex(w, 1, 3, { name: 'Standing Calf Raise', sets: 3, reps: '10', load: 'Heavy', restSec: 90, notes: 'Full pause at the bottom, drive all the way up. Ankle stiffness is the last link in the jump.' }),
+        ex(w, 1, 4, { name: 'Copenhagen Plank', sets: 3, reps: '20 s/side', tracking: 'time', restSec: 60, notes: 'Adductors and core in one. Same movement returns in the Peak block.' }),
       ],
     },
     {
@@ -212,7 +212,7 @@ const buildBlock2Days = (w: number): WorkoutDay[] => {
       exercises: [
         ex(w, 3, 1, { name: 'Sprints', sets: 5, reps: '30 m', load: 'Max effort', tracking: 'time', restSec: 150, notes: '2-3 min rest' }),
         ex(w, 3, 2, { name: 'Power Clean', sets: clean.sets, reps: clean.reps, load: clean.load, restSec: 180 }),
-        ex(w, 3, 3, { name: 'Front Squat', sets: 4, reps: '3', load: '80% TM', restSec: 180 }),
+        ex(w, 3, 3, { name: 'Trap Bar Deadlift', sets: 3, reps: '3', load: '~75-80% of a comfortable 5RM', restSec: 180, notes: 'Move it fast — this is the power day. Handles high, hips a touch lower than a conventional pull.' }),
         ex(w, 3, 4, { name: 'Nordic Curl or Barbell Hip Thrust', sets: 3, reps: '6', load: 'RPE 8', restSec: 120 }),
       ],
     },
