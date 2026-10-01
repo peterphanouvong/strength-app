@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, Check, Timer, Plus, X, History, Medal, MoreVertical } from 'lucide-react';
+import { ChevronLeft, Check, Timer, Plus, X, History, Medal, MoreVertical, Pencil, RotateCcw } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { WorkoutDay, Exercise } from '../data';
 import { cn } from '../lib/utils';
@@ -27,7 +27,8 @@ import { ActiveSession, getActiveSession, startSession, endSession } from '../li
 import { recordSetBest } from '../lib/bests';
 import { ExerciseHistory, SET_TYPE_COLOR } from '../components/ExerciseHistory';
 import { useEntranceOnce } from '../lib/animation';
-import { useWeeks } from '../lib/programme/store';
+import { useWeeks, undoLast, getUndoCount } from '../lib/programme/store';
+import { EditExerciseSheet } from '../components/EditExerciseSheet';
 
 const REST_OVERRIDES_KEY = 'vb-rest-overrides-v1';
 
@@ -171,6 +172,8 @@ export default function WorkoutPage() {
   const [notifPerm, setNotifPerm] = useState(notificationPermission());
   const [cancelOpen, setCancelOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editTarget, setEditTarget] = useState<{ exercise: Exercise | null } | null>(null);
 
   if (!day) {
     return (
@@ -394,9 +397,24 @@ export default function WorkoutPage() {
               </button>
             </>
           ) : (
-            <span className="flex-shrink-0 bg-ink/10 text-secondary font-bold text-xs px-3.5 py-2 rounded-full">
-              Preview
-            </span>
+            <>
+              <span className="flex-shrink-0 bg-ink/10 text-secondary font-bold text-xs px-3.5 py-2 rounded-full">
+                Preview
+              </span>
+              <button
+                onClick={() => {
+                  hapticTap();
+                  setEditMode((m) => !m);
+                }}
+                aria-label="Edit workout"
+                className={cn(
+                  'w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center transition-colors',
+                  editMode ? 'bg-ink text-surface' : 'bg-ink/10 hover:bg-ink/20'
+                )}
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            </>
           )}
         </div>
         {/* header progress bar */}
@@ -444,10 +462,37 @@ export default function WorkoutPage() {
                 onPickSetType={(setIndex) => setSetTypeTarget({ exercise, setIndex })}
                 onConfigureRest={() => setRestTarget(exercise)}
                 onShowHistory={() => setHistoryTarget(exercise)}
+                onEdit={editMode ? () => setEditTarget({ exercise }) : undefined}
               />
             </motion.section>
           ))}
         </div>
+
+        {editMode && (
+          <div className="mt-8 space-y-2">
+            <button
+              onClick={() => {
+                hapticTap();
+                setEditTarget({ exercise: null });
+              }}
+              className="w-full flex items-center justify-center gap-1.5 bg-ink/10 hover:bg-ink/20 font-bold text-sm py-3.5 rounded-xl transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Add exercise
+            </button>
+            {getUndoCount() > 0 && (
+              <button
+                onClick={() => {
+                  hapticTap();
+                  undoLast();
+                }}
+                aria-label="Undo last edit"
+                className="w-full flex items-center justify-center gap-1.5 bg-ink/10 hover:bg-ink/20 text-secondary font-bold text-sm py-3.5 rounded-xl transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" /> Undo last edit
+              </button>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Preview: sticky start CTA */}
@@ -696,6 +741,14 @@ export default function WorkoutPage() {
           />
         )}
       </BottomSheet>
+
+      {/* Manual edit sheet (edit mode only) */}
+      <EditExerciseSheet
+        day={day}
+        exercise={editTarget?.exercise ?? null}
+        open={editTarget !== null}
+        onClose={() => setEditTarget(null)}
+      />
     </div>
   );
 }
@@ -785,6 +838,7 @@ const ExerciseSection: React.FC<{
   onPickSetType: (setIndex: number) => void;
   onConfigureRest: () => void;
   onShowHistory: () => void;
+  onEdit?: () => void;
 }> = ({
   exercise,
   index,
@@ -800,6 +854,7 @@ const ExerciseSection: React.FC<{
   onPickSetType,
   onConfigureRest,
   onShowHistory,
+  onEdit,
 }) => {
   const tracking = exercise.tracking;
 
@@ -823,6 +878,18 @@ const ExerciseSection: React.FC<{
           {exercise.sets} × {exercise.reps}
         </span>
       </div>
+      {onEdit && (
+        <button
+          onClick={() => {
+            hapticTap();
+            onEdit();
+          }}
+          aria-label={`Edit ${exercise.name}`}
+          className="inline-flex items-center gap-1 bg-ink/10 hover:bg-ink/20 rounded-full px-2.5 py-1 text-xs font-bold text-secondary transition-colors mb-1"
+        >
+          <Pencil className="w-3.5 h-3.5" /> Edit
+        </button>
+      )}
       {exercise.load && <p className="text-sm font-bold text-accent mb-1">{exercise.load}</p>}
       {exercise.notes && <p className="text-sm text-secondary leading-relaxed mb-1">{exercise.notes}</p>}
 
