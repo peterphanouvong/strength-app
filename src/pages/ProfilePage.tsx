@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { Check, ChevronRight, Medal } from 'lucide-react';
@@ -24,10 +24,20 @@ import {
 import { getBests, listPrs } from '../lib/bests';
 import { MonthCalendar } from '../components/MonthCalendar';
 import { formatElapsed } from './WorkoutPage';
+import { getCoachToken, saveCoachToken } from '../lib/coach/api';
+import { getProfile, saveProfile } from '../lib/programme/store';
+import { Profile } from '../lib/programme/types';
 
 function formatDate(t: number): string {
   return new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
+
+const DAYS_PER_WEEK_CHOICES = [1, 2, 3, 4, 5, 6, 7];
+const EXPERIENCE_CHOICES: { id: Profile['experience']; label: string }[] = [
+  { id: 'beginner', label: 'Beginner' },
+  { id: 'intermediate', label: 'Intermediate' },
+  { id: 'advanced', label: 'Advanced' },
+];
 
 export default function ProfilePage() {
   const reduceMotion = useReducedMotion();
@@ -36,6 +46,18 @@ export default function ProfilePage() {
   const [themeId, setThemeId] = useState(getSavedThemeId);
   const [themeSheetOpen, setThemeSheetOpen] = useState(false);
   const currentTheme = THEMES.find((t) => t.id === themeId) ?? THEMES[0];
+
+  const [coachSheetOpen, setCoachSheetOpen] = useState(false);
+  const [coachTokenInput, setCoachTokenInput] = useState('');
+  const [hasCoachToken, setHasCoachToken] = useState(() => getCoachToken().length > 0);
+
+  const [profileSheetOpen, setProfileSheetOpen] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(getProfile);
+  const [goals, setGoals] = useState('');
+  const [sportContext, setSportContext] = useState('');
+  const [equipmentInput, setEquipmentInput] = useState('');
+  const [daysPerWeek, setDaysPerWeek] = useState(3);
+  const [experience, setExperience] = useState<Profile['experience']>('beginner');
   const [historyRaw] = useLocalStorage<CompletedWorkout[]>(HISTORY_KEY, []);
   const history = coerceHistory(historyRaw);
   const [monthDate, setMonthDate] = useState(() => {
@@ -46,6 +68,23 @@ export default function ProfilePage() {
   const streak = getWeekStreak(history);
   const recentFirst = [...history].sort((a, b) => b.completedAt - a.completedAt);
   const [prs] = useState(() => listPrs(getBests()));
+
+  // Re-seed the coach token field whenever the sheet opens.
+  useEffect(() => {
+    if (!coachSheetOpen) return;
+    setCoachTokenInput(getCoachToken());
+  }, [coachSheetOpen]);
+
+  // Re-seed the training profile form whenever the sheet opens.
+  useEffect(() => {
+    if (!profileSheetOpen) return;
+    const p = getProfile();
+    setGoals(p?.goals ?? '');
+    setSportContext(p?.sportContext ?? '');
+    setEquipmentInput((p?.equipment ?? []).join(', '));
+    setDaysPerWeek(p?.daysPerWeek ?? 3);
+    setExperience(p?.experience ?? 'beginner');
+  }, [profileSheetOpen]);
 
   const rise = (delay: number) => ({
     initial: reduceMotion || !entered ? false : ({ opacity: 0, y: 16 } as const),
@@ -182,6 +221,37 @@ export default function ProfilePage() {
                 Get an alert when a rest timer ends, even in the background.
               </p>
             </div>
+
+            {/* Coach access */}
+            <button
+              onClick={() => {
+                hapticTap();
+                setCoachSheetOpen(true);
+              }}
+              className="w-full flex items-center justify-between gap-3 px-4 py-4 text-left hover:bg-ink/5 transition-colors"
+            >
+              <span className="font-bold text-sm">Coach access</span>
+              {hasCoachToken ? (
+                <span className="text-xs font-bold text-primary">On</span>
+              ) : (
+                <span className="bg-ink/10 font-bold text-xs px-3.5 py-2 rounded-full">Set up</span>
+              )}
+            </button>
+
+            {/* Training profile */}
+            <button
+              onClick={() => {
+                hapticTap();
+                setProfileSheetOpen(true);
+              }}
+              className="w-full flex items-center justify-between gap-3 px-4 py-4 text-left hover:bg-ink/5 transition-colors"
+            >
+              <span className="font-bold text-sm">Training profile</span>
+              <span className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-sm font-medium text-secondary">{profile ? 'Set' : 'Not set'}</span>
+                <ChevronRight className="w-4 h-4 text-secondary" />
+              </span>
+            </button>
           </div>
         </motion.section>
 
@@ -223,6 +293,146 @@ export default function ProfilePage() {
           <p className="text-xs text-secondary text-center mt-4">
             Applies everywhere, instantly. Saved on this device.
           </p>
+        </BottomSheet>
+
+        {/* Coach access sheet */}
+        <BottomSheet open={coachSheetOpen} onClose={() => setCoachSheetOpen(false)} title="Coach access">
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="coach-token" className="block text-[0.6875rem] font-bold text-secondary mb-1.5">
+                Access token
+              </label>
+              <input
+                id="coach-token"
+                aria-label="Coach access token"
+                type="password"
+                value={coachTokenInput}
+                onChange={(e) => setCoachTokenInput(e.target.value)}
+                className="w-full bg-ink/10 rounded-xl px-3.5 py-3 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <p className="text-xs text-secondary leading-relaxed mt-1.5">
+                Paste the access token from your Supabase secrets. Stored only on this device.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                hapticSelect();
+                saveCoachToken(coachTokenInput);
+                setHasCoachToken(coachTokenInput.trim().length > 0);
+                setCoachSheetOpen(false);
+              }}
+              className="w-full bg-primary text-onfill font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
+            >
+              Save
+            </button>
+          </div>
+        </BottomSheet>
+
+        {/* Training profile sheet */}
+        <BottomSheet open={profileSheetOpen} onClose={() => setProfileSheetOpen(false)} title="Training profile">
+          <div className="space-y-4 max-h-[65vh] overflow-y-auto -mx-1 px-1">
+            <div>
+              <label htmlFor="profile-goals" className="block text-[0.6875rem] font-bold text-secondary mb-1.5">
+                Goals
+              </label>
+              <textarea
+                id="profile-goals"
+                aria-label="Goals"
+                value={goals}
+                onChange={(e) => setGoals(e.target.value)}
+                rows={3}
+                className="w-full bg-ink/10 rounded-xl px-3.5 py-3 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              />
+            </div>
+            <div>
+              <label htmlFor="profile-sport" className="block text-[0.6875rem] font-bold text-secondary mb-1.5">
+                Sport context
+              </label>
+              <input
+                id="profile-sport"
+                aria-label="Sport context"
+                value={sportContext}
+                onChange={(e) => setSportContext(e.target.value)}
+                className="w-full bg-ink/10 rounded-xl px-3.5 py-3 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label htmlFor="profile-equipment" className="block text-[0.6875rem] font-bold text-secondary mb-1.5">
+                Equipment
+              </label>
+              <input
+                id="profile-equipment"
+                aria-label="Equipment"
+                value={equipmentInput}
+                onChange={(e) => setEquipmentInput(e.target.value)}
+                placeholder="Barbell, dumbbells, bands…"
+                className="w-full bg-ink/10 rounded-xl px-3.5 py-3 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <span className="block text-[0.6875rem] font-bold text-secondary mb-1.5">Days per week</span>
+              <div className="grid grid-cols-7 gap-1.5">
+                {DAYS_PER_WEEK_CHOICES.map((d) => (
+                  <button
+                    key={d}
+                    aria-pressed={daysPerWeek === d}
+                    onClick={() => {
+                      hapticTap();
+                      setDaysPerWeek(d);
+                    }}
+                    className={cn(
+                      'py-2.5 rounded-xl font-bold text-sm tabular-nums transition-colors',
+                      daysPerWeek === d ? 'bg-primary text-onfill' : 'bg-ink/10 hover:bg-ink/20'
+                    )}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <span className="block text-[0.6875rem] font-bold text-secondary mb-1.5">Experience</span>
+              <div className="flex gap-2">
+                {EXPERIENCE_CHOICES.map((e) => (
+                  <button
+                    key={e.id}
+                    aria-pressed={experience === e.id}
+                    onClick={() => {
+                      hapticTap();
+                      setExperience(e.id);
+                    }}
+                    className={cn(
+                      'px-3 py-2 rounded-full text-xs font-bold transition-colors',
+                      experience === e.id ? 'bg-ink text-surface' : 'bg-ink/10 text-secondary hover:bg-ink/20'
+                    )}
+                  >
+                    {e.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                hapticSelect();
+                const next: Profile = {
+                  goals: goals.trim(),
+                  sportContext: sportContext.trim() || undefined,
+                  equipment: equipmentInput
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                  daysPerWeek,
+                  experience,
+                };
+                saveProfile(next);
+                setProfile(next);
+                setProfileSheetOpen(false);
+              }}
+              className="w-full bg-primary text-onfill font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
+            >
+              Save
+            </button>
+          </div>
         </BottomSheet>
       </main>
     </div>
