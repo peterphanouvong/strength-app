@@ -16,6 +16,27 @@ export const PROGRESS_KEY = 'volleyball-workout-progress-v3';
 
 export type Progress = { total: number; completed: number; percentage: number };
 
+/**
+ * Remove set `setIndex`'s log for one exercise and shift every later set's log
+ * up by one, so logged weights stay attached to the right rows after an inline
+ * set deletion. Pure — returns a new map. `sets` is the count BEFORE deletion.
+ */
+export function removeSetLogAt(
+  progress: ProgressMap,
+  exerciseId: string,
+  setIndex: number,
+  sets: number
+): ProgressMap {
+  const next: ProgressMap = { ...progress };
+  delete next[`${exerciseId}-${setIndex}`];
+  for (let i = setIndex + 1; i < sets; i++) {
+    const log = next[`${exerciseId}-${i}`];
+    delete next[`${exerciseId}-${i}`];
+    if (log) next[`${exerciseId}-${i - 1}`] = log;
+  }
+  return next;
+}
+
 export function getDayProgress(day: WorkoutDay, sets: ProgressMap): Progress {
   let total = 0;
   let completed = 0;

@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, Check, Timer, Plus, Minus, X, History, Medal, MoreVertical, Pencil, RotateCcw } from 'lucide-react';
+import { ChevronLeft, Check, Timer, Plus, Trash2, X, History, Medal, MoreVertical, Pencil, RotateCcw } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { WorkoutDay, Exercise } from '../data';
 import { cn } from '../lib/utils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { PROGRESS_KEY, ProgressMap, SetLog, SetType, getDayProgress, getDayVolume } from '../lib/progress';
+import { PROGRESS_KEY, ProgressMap, SetLog, SetType, getDayProgress, getDayVolume, removeSetLogAt } from '../lib/progress';
 import { BottomSheet } from '../components/BottomSheet';
 import {
   unlockAudio,
@@ -215,9 +215,17 @@ export default function WorkoutPage() {
     hapticSelect();
     applyEdits([{ type: 'update-exercise', exerciseId: exercise.id, patch: { sets: exercise.sets + 1 } }]);
   };
-  const removeLastSet = (exercise: Exercise) => {
-    hapticTap();
-    applyEdits([{ type: 'update-exercise', exerciseId: exercise.id, patch: { sets: exercise.sets - 1 } }]);
+  const deleteSet = (exercise: Exercise, setIndex: number) => {
+    hapticSelect();
+    const res = applyEdits([
+      { type: 'update-exercise', exerciseId: exercise.id, patch: { sets: exercise.sets - 1 } },
+    ]);
+    if (res.ok === true) {
+      // Keep logged weights attached to the right rows: drop this set's log and
+      // shift the ones below it up by one. A deliberate swipe deletes its log
+      // too (Hevy semantics) — no confirm sheet.
+      setCompletedSets((prev) => removeSetLogAt(prev, exercise.id, setIndex, exercise.sets));
+    }
   };
 
   /** Remove every logged entry for a day from the progress map (discard semantics). */
@@ -493,7 +501,7 @@ export default function WorkoutPage() {
                 onShowHistory={() => setHistoryTarget(exercise)}
                 onEdit={editMode && !live ? () => setEditTarget({ exercise }) : undefined}
                 onAddSet={live || editMode ? () => addSet(exercise) : undefined}
-                onRemoveLastSet={live || editMode ? () => removeLastSet(exercise) : undefined}
+                onDeleteSet={live || editMode ? (setIndex: number) => deleteSet(exercise, setIndex) : undefined}
               />
             </motion.section>
           ))}
@@ -871,7 +879,7 @@ const ExerciseSection: React.FC<{
   onShowHistory: () => void;
   onEdit?: () => void;
   onAddSet?: () => void;
-  onRemoveLastSet?: () => void;
+  onDeleteSet?: (setIndex: number) => void;
 }> = ({
   exercise,
   index,
@@ -889,13 +897,17 @@ const ExerciseSection: React.FC<{
   onShowHistory,
   onEdit,
   onAddSet,
-  onRemoveLastSet,
+  onDeleteSet,
 }) => {
   const tracking = exercise.tracking;
-  // Removing the last set is only offered while that row has no logged data —
-  // set logs key off the index, so a logged row must go through the edit
-  // sheet's warning flow instead of a one-tap inline control.
-  const lastSetUntouched = !completedSets[`${exercise.id}-${exercise.sets - 1}`];
+  // Swipe-to-delete: which set row is currently slid open (one at a time).
+  const [revealedSet, setRevealedSet] = useState<number | null>(null);
+  const canDeleteSets = onDeleteSet !== undefined && exercise.sets > 1;
+  useEffect(() => {
+    if (!canDeleteSets) {
+      setRevealedSet(null);
+    }
+  }, [canDeleteSets]);
 
   return (
     <div>
@@ -975,13 +987,45 @@ const ExerciseSection: React.FC<{
           const inputsDisabled = log.completed || !live;
 
           return (
-            <div
-              key={setIndex}
-              className={cn(
-                'grid grid-cols-12 gap-2 items-center px-1 py-1.5 rounded-xl transition-colors',
-                log.completed && 'bg-primary/20 ring-1 ring-inset ring-primary/25'
+            <div key={setIndex} className="relative">
+              {/* Revealed by swiping the row left (Hevy-style). Rendered only
+                  while revealed so it never intercepts taps or tab focus. */}
+              {canDeleteSets && revealedSet === setIndex && (
+                <button
+                  onClick={() => {
+                    setRevealedSet(null);
+                    onDeleteSet!(setIndex);
+                  }}
+                  aria-label={`Delete set ${setIndex + 1} of ${exercise.name}`}
+                  className="absolute inset-y-0 right-0 w-[4.25rem] bg-danger text-ink rounded-xl flex items-center justify-center"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               )}
-            >
+              <motion.div
+                data-testid="set-row"
+                drag={canDeleteSets ? 'x' : false}
+                dragDirectionLock
+                dragConstraints={{ left: -76, right: 0 }}
+                dragElastic={0.12}
+                dragMomentum={false}
+                animate={{ x: canDeleteSets && revealedSet === setIndex ? -76 : 0 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x < -40) {
+                    setRevealedSet(setIndex);
+                  } else {
+                    setRevealedSet((r) => (r === setIndex ? null : r));
+                  }
+                }}
+                className="bg-surface rounded-xl"
+              >
+              <div
+                className={cn(
+                  'grid grid-cols-12 gap-2 items-center px-1 py-1.5 rounded-xl transition-colors',
+                  log.completed && 'bg-primary/20 ring-1 ring-inset ring-primary/25'
+                )}
+              >
               <button
                 onClick={() => {
                   hapticTap();
@@ -1100,6 +1144,8 @@ const ExerciseSection: React.FC<{
                   )}
                 </div>
               </div>
+              </div>
+              </motion.div>
             </div>
           );
         })}
@@ -1115,15 +1161,6 @@ const ExerciseSection: React.FC<{
           >
             <Plus className="w-4 h-4" /> Add set
           </button>
-          {onRemoveLastSet && exercise.sets > 1 && lastSetUntouched && (
-            <button
-              onClick={onRemoveLastSet}
-              aria-label={`Remove last set from ${exercise.name}`}
-              className="w-11 flex items-center justify-center bg-ink/5 hover:bg-ink/10 text-secondary hover:text-danger rounded-xl transition-colors"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-          )}
         </div>
       )}
     </div>
