@@ -8,7 +8,7 @@ import { PROGRESS_KEY } from '../lib/progress';
 import { EditOp } from '../lib/programme/ops';
 import { applyOps } from '../lib/programme/engine';
 import { applyEdits, getProgramme } from '../lib/programme/store';
-import { formatElapsed } from '../pages/WorkoutPage';
+import { formatElapsed } from '../lib/time';
 
 const REST_CHOICES = [0, 30, 60, 90, 120, 150, 180, 240, 300];
 const TRACKING_CHOICES: { id: Tracking; label: string }[] = [

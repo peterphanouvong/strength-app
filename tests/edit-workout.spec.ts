@@ -56,3 +56,21 @@ test('add a new exercise to the day', async ({ page }) => {
   await sheet.getByRole('button', { name: 'Add exercise' }).click();
   await expect(page.getByRole('heading', { name: /Calf Raise/ })).toBeVisible();
 });
+
+test('starting the workout from edit mode closes edit mode immediately — no leaking into the live session', async ({
+  page,
+}) => {
+  await page.goto('/workout/w1-d1');
+  await page.getByRole('button', { name: 'Edit workout' }).click();
+  await expect(page.getByRole('button', { name: 'Edit Back Squat' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Add exercise' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Start workout' }).click();
+
+  // Live now — no edit pill, no add/undo footer, no edit-mode toggle at all
+  // (the AI owns mid-workout changes, not the manual edit sheet).
+  await expect(page.getByRole('button', { name: 'Edit Back Squat' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Add exercise' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Edit workout' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Finish' })).toBeVisible();
+});

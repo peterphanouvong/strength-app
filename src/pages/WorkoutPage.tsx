@@ -29,6 +29,7 @@ import { ExerciseHistory, SET_TYPE_COLOR } from '../components/ExerciseHistory';
 import { useEntranceOnce } from '../lib/animation';
 import { useWeeks, undoLast, getUndoCount } from '../lib/programme/store';
 import { EditExerciseSheet } from '../components/EditExerciseSheet';
+import { formatElapsed } from '../lib/time';
 
 const REST_OVERRIDES_KEY = 'vb-rest-overrides-v1';
 
@@ -122,15 +123,10 @@ function useWorkoutSession(dayId: string | undefined) {
   return { live, elapsed, begin, clear, conflict, dismissConflict: () => setConflict(null), takeOver };
 }
 
-export function formatElapsed(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  if (m >= 60) {
-    const h = Math.floor(m / 60);
-    return `${h}h ${m % 60}m`;
-  }
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
+// Re-exported for existing importers (ProfilePage, CongratsPage, CompletionPage,
+// HomePage, ActiveWorkoutPill) — the canonical definition lives in lib/time.ts
+// so EditExerciseSheet can use it without creating a page <-> component cycle.
+export { formatElapsed };
 
 export default function WorkoutPage() {
   const { id } = useParams<{ id: string }>();
@@ -174,6 +170,27 @@ export default function WorkoutPage() {
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editTarget, setEditTarget] = useState<{ exercise: Exercise | null } | null>(null);
+
+  // Edit mode must never survive a day-id change while mounted (e.g. the conflict
+  // sheet's "Go back to that workout" navigates /workout/w1-d2 → /workout/w1-d1
+  // without remounting). Reset synchronously during render, mirroring
+  // useWorkoutSession's own prevDayId pattern, so there's no stale-sheet frame.
+  const [prevEditDayId, setPrevEditDayId] = useState(id);
+  if (id !== prevEditDayId) {
+    setPrevEditDayId(id);
+    setEditMode(false);
+    setEditTarget(null);
+  }
+
+  // Edit mode belongs to preview only — the AI handles mid-workout changes.
+  // Going live (Start workout / set-tap convenience) must close it immediately,
+  // not just hide the toggle, or the edit pills/footer/sheet stay usable mid-session.
+  useEffect(() => {
+    if (live) {
+      setEditMode(false);
+      setEditTarget(null);
+    }
+  }, [live]);
 
   if (!day) {
     return (
@@ -462,13 +479,13 @@ export default function WorkoutPage() {
                 onPickSetType={(setIndex) => setSetTypeTarget({ exercise, setIndex })}
                 onConfigureRest={() => setRestTarget(exercise)}
                 onShowHistory={() => setHistoryTarget(exercise)}
-                onEdit={editMode ? () => setEditTarget({ exercise }) : undefined}
+                onEdit={editMode && !live ? () => setEditTarget({ exercise }) : undefined}
               />
             </motion.section>
           ))}
         </div>
 
-        {editMode && (
+        {editMode && !live && (
           <div className="mt-8 space-y-2">
             <button
               onClick={() => {
@@ -746,7 +763,7 @@ export default function WorkoutPage() {
       <EditExerciseSheet
         day={day}
         exercise={editTarget?.exercise ?? null}
-        open={editTarget !== null}
+        open={!live && editTarget !== null}
         onClose={() => setEditTarget(null)}
       />
     </div>
