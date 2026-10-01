@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Dumbbell, User } from 'lucide-react';
+import { Home, Dumbbell, User, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { hapticTap } from '../lib/feedback';
 
@@ -13,6 +13,7 @@ export function isTabBarRoute(pathname: string): boolean {
   return (
     pathname === '/' ||
     pathname === '/programme' ||
+    pathname === '/coach' ||
     pathname === '/profile' ||
     /^\/week\/[^/]+$/.test(pathname)
   );
@@ -26,6 +27,7 @@ const TABS = [
     icon: Dumbbell,
     isActive: (p: string) => p === '/programme' || p.startsWith('/week/'),
   },
+  { to: '/coach', label: 'Coach', icon: Sparkles, isActive: (p: string) => p === '/coach' },
   { to: '/profile', label: 'Profile', icon: User, isActive: (p: string) => p === '/profile' },
 ];
 
@@ -35,7 +37,7 @@ export function TabBar() {
 
   return (
     <nav aria-label="Main" className="fixed bottom-4 inset-x-4 z-30">
-      <div className="max-w-xl mx-auto bg-surface-deep/95 backdrop-blur-md border border-ink/15 rounded-full px-3 py-2 shadow-xl grid grid-cols-3">
+      <div className="max-w-xl mx-auto bg-surface-deep/95 backdrop-blur-md border border-ink/15 rounded-full px-3 py-2 shadow-xl grid grid-cols-4">
         {TABS.map((tab) => {
           const active = tab.isActive(location.pathname);
           return (
