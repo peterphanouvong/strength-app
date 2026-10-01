@@ -58,6 +58,23 @@ function dayHasLogs(progress: ProgressMap, day: WorkoutDay): boolean {
   return day.exercises.some((e) => hasLogs(progress, e.id));
 }
 
+/**
+ * A replace-day/replace-week payload can carry forward an existing exercise's
+ * id while changing its name — a rename in effect, same as update-exercise's
+ * `patch.name`. Surface the same warning so history/PR detachment is never
+ * silent just because the rename arrived via a replace instead of a patch.
+ */
+function warnRenamedExercises(oldExercises: Exercise[], payloadExercises: ExercisePayload[], warnings: Warning[]): void {
+  const byId = new Map(oldExercises.map((e) => [e.id, e]));
+  for (const pe of payloadExercises) {
+    if (!pe.id) continue;
+    const old = byId.get(pe.id);
+    if (old && pe.name !== old.name) {
+      warnings.push({ code: 'rename-detaches-history', message: `Renaming "${old.name}" to "${pe.name}" — past history and PRs stay under the old name.` });
+    }
+  }
+}
+
 /** Recompute display ordering after structural changes. Ids never change. */
 function renumber(weeks: WeekPlan[]): WeekPlan[] {
   return weeks.map((w, wi) => ({
@@ -199,6 +216,7 @@ export function applyOps(programme: Programme, ops: EditOp[], progress: Progress
           (e) => !carried.includes(e.id) && hasLogs(progress, e.id)
         );
         warnLogs(`"${old.title}"`, droppedLogged);
+        warnRenamedExercises(old.exercises, op.day.exercises, warnings);
         const fresh = materialiseDay({ ...op.day, id: op.day.id ?? old.id }, taken);
         weeks[loc.weekIndex].days[loc.dayIndex] = fresh;
         break;
@@ -253,6 +271,11 @@ export function applyOps(programme: Programme, ops: EditOp[], progress: Progress
           d.exercises.some((e) => !carried.includes(e.id) && hasLogs(progress, e.id))
         );
         warnLogs(`Week ${old.weekNumber}`, droppedLogged);
+        warnRenamedExercises(
+          old.days.flatMap((d) => d.exercises),
+          op.week.days.flatMap((d) => d.exercises),
+          warnings
+        );
         const fresh = materialiseWeek(op.week, taken);
         weeks[wi] = { ...fresh, id: old.id };
         break;

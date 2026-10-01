@@ -82,4 +82,40 @@ describe('applyOps — exercise ops', () => {
     if (res.ok === true) return;
     expect(res.errors[0].opIndex).toBe(1);
   });
+
+  it('replace-day carrying an exercise id with a changed name warns rename-detaches-history', () => {
+    const res = applyOps(makeTestProgramme(), [
+      {
+        type: 'replace-day',
+        dayId: 'w1-d1',
+        day: {
+          title: 'Day A: Lower',
+          exercises: [
+            { id: 'w1-d1-e1', name: 'Front Squat', sets: 4, reps: '6', load: '70% TM', tracking: 'weighted', restSec: 180 },
+            { id: 'w1-d1-e2', name: 'Split Squat', sets: 3, reps: '8/leg', load: 'RPE 7', tracking: 'weighted', restSec: 90 },
+          ],
+        },
+      },
+    ]);
+    if (!res.ok) throw new Error('expected ok');
+    expect(res.warnings.some((w) => w.code === 'rename-detaches-history')).toBe(true);
+  });
+
+  it('replace-day carrying an exercise id with the same name does not warn rename-detaches-history', () => {
+    const res = applyOps(makeTestProgramme(), [
+      {
+        type: 'replace-day',
+        dayId: 'w1-d1',
+        day: {
+          title: 'Day A: Lower',
+          exercises: [
+            { id: 'w1-d1-e1', name: 'Back Squat', sets: 5, reps: '6', load: '70% TM', tracking: 'weighted', restSec: 180 },
+            { id: 'w1-d1-e2', name: 'Split Squat', sets: 3, reps: '8/leg', load: 'RPE 7', tracking: 'weighted', restSec: 90 },
+          ],
+        },
+      },
+    ]);
+    if (!res.ok) throw new Error('expected ok');
+    expect(res.warnings.some((w) => w.code === 'rename-detaches-history')).toBe(false);
+  });
 });
