@@ -174,9 +174,14 @@ Deno.serve(async (req) => {
     return json(400, { error: 'invalid json' });
   }
 
-  const client = new Anthropic({ apiKey: Deno.env.get('ANTHROPIC_API_KEY') });
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+  if (!apiKey) {
+    console.error('ANTHROPIC_API_KEY is not set');
+    return json(502, { error: 'coach unavailable, try again' });
+  }
 
   try {
+    const client = new Anthropic({ apiKey });
     const chat = ChatBody.safeParse(raw);
     if (chat.success) return json(200, await handleChat(client, chat.data));
     const gen = GenerateBody.safeParse(raw);
