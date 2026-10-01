@@ -1,21 +1,22 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { TRAINING_PLAN } from '../data';
 import { cn } from '../lib/utils';
 import { useActiveSession } from '../lib/session';
 import { hapticTap } from '../lib/feedback';
 import { formatElapsed } from '../pages/WorkoutPage';
 import { isTabBarRoute } from './TabBar';
+import { useWeeks } from '../lib/programme/store';
 
 export function ActiveWorkoutPill() {
   const { session, elapsed } = useActiveSession();
   const location = useLocation();
   const navigate = useNavigate();
+  const weeks = useWeeks();
 
   let title: string | null = null;
   if (session) {
-    for (const week of TRAINING_PLAN) {
+    for (const week of weeks) {
       const found = week.days.find((d) => d.id === session.dayId);
       if (found) {
         title = found.title.split(': ')[1] || found.title;

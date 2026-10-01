@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { ChevronLeft } from 'lucide-react';
-import { TRAINING_PLAN, WorkoutDay } from '../data';
+import { WorkoutDay } from '../data';
 import { formatElapsed } from './WorkoutPage';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { PROGRESS_KEY, ProgressMap, getDayProgress, getDayVolume } from '../lib/progress';
@@ -10,6 +10,7 @@ import { hapticTap, hapticSelect } from '../lib/feedback';
 import { endSession, getActiveSession } from '../lib/session';
 import { appendWorkout } from '../lib/history';
 import { reconcileDayBests } from '../lib/bests';
+import { useWeeks } from '../lib/programme/store';
 
 type CompletionState = { elapsed: number };
 
@@ -24,12 +25,13 @@ export default function CompletionPage() {
   const location = useLocation();
   const reduceMotion = useReducedMotion();
   const state = (location.state ?? null) as CompletionState | null;
+  const weeks = useWeeks();
 
   // Find the day across all weeks — stats recompute from the progress map, so a
   // direct visit (no router state) still shows the truth.
   let day: WorkoutDay | undefined;
   let weekNum = 1;
-  for (const week of TRAINING_PLAN) {
+  for (const week of weeks) {
     const found = week.days.find((d) => d.id === id);
     if (found) {
       day = found;

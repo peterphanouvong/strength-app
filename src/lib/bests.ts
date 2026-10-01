@@ -6,8 +6,9 @@
 // deliberately excluded — data.ts has no lower-is-better flag, and sprints must
 // never celebrate slower times.
 
-import { TRAINING_PLAN, Exercise, WorkoutDay } from '../data';
+import { Exercise, WorkoutDay } from '../data';
 import { PROGRESS_KEY, ProgressMap, SetLog } from './progress';
+import { getWeeks } from './programme/store';
 
 export const BESTS_KEY = 'vb-personal-bests-v1';
 
@@ -149,7 +150,7 @@ function bootstrapFromProgress(): BestsMap {
   }
   let bests: BestsMap = {};
   const at = Date.now();
-  for (const week of TRAINING_PLAN) {
+  for (const week of getWeeks()) {
     for (const day of week.days) {
       for (const exercise of day.exercises) {
         for (let i = 0; i < exercise.sets; i++) {

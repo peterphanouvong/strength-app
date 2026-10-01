@@ -2,12 +2,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Check } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
-import { TRAINING_PLAN, WeekPlan } from '../data';
+import { WeekPlan } from '../data';
 import { cn } from '../lib/utils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { PROGRESS_KEY, ProgressMap, getWeekProgress } from '../lib/progress';
 import { hapticSelect } from '../lib/feedback';
 import { useEntranceOnce } from '../lib/animation';
+import { useWeeks } from '../lib/programme/store';
 
 type BlockGroup = {
   name: string; // e.g. "Rebuild"
@@ -16,9 +17,9 @@ type BlockGroup = {
   weeks: WeekPlan[];
 };
 
-function groupByBlock(): BlockGroup[] {
+function groupByBlock(weeks: WeekPlan[]): BlockGroup[] {
   const groups: BlockGroup[] = [];
-  for (const week of TRAINING_PLAN) {
+  for (const week of weeks) {
     const numeral = week.block.charAt(0);
     const name = week.block.substring(4);
     let group = groups.find((g) => g.name === name);
@@ -47,10 +48,11 @@ export const BLOCK_TEXT_COLOR: Record<string, string> = {
 };
 
 export default function WeeksPage() {
+  const weeks = useWeeks();
   const [completedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
   const reduceMotion = useReducedMotion();
   const entered = useEntranceOnce('weeks');
-  const blocks = groupByBlock();
+  const blocks = groupByBlock(weeks);
 
   const rise = (delay: number) => ({
     initial: reduceMotion || !entered ? false : ({ opacity: 0, y: 16 } as const),

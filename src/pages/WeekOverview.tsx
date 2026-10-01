@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Check, Play } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { TRAINING_PLAN, IN_SEASON_ADJUSTMENTS, WorkoutDay } from '../data';
+import { IN_SEASON_ADJUSTMENTS, WorkoutDay, WeekPlan } from '../data';
 import { cn } from '../lib/utils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { PROGRESS_KEY, ProgressMap, getDayProgress } from '../lib/progress';
 import { BLOCK_TEXT_COLOR } from './WeeksPage';
 import { hapticTap, hapticSelect } from '../lib/feedback';
 import { useEntranceOnce } from '../lib/animation';
+import { useWeeks } from '../lib/programme/store';
 
 // Poster panel palettes, cycled per day
 const POSTERS = [
@@ -27,8 +28,9 @@ export default function WeekOverview() {
   const { weekNumber } = useParams<{ weekNumber: string }>();
   const navigate = useNavigate();
   const [completedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
+  const weeks = useWeeks();
 
-  const week = TRAINING_PLAN.find((w) => w.weekNumber === Number(weekNumber));
+  const week = weeks.find((w) => w.weekNumber === Number(weekNumber));
 
   if (!week) {
     return (
@@ -100,7 +102,7 @@ const INFO_TABS: { id: InfoTab; label: string }[] = [
   { id: 'season', label: 'In-season' },
 ];
 
-const WeekInfoTabs: React.FC<{ week: (typeof TRAINING_PLAN)[number] }> = ({ week }) => {
+const WeekInfoTabs: React.FC<{ week: WeekPlan }> = ({ week }) => {
   const [active, setActive] = useState<InfoTab>('week');
 
   return (

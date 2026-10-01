@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Check, ChevronRight, Medal, MoreVertical, Play } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
-import { TRAINING_PLAN } from '../data';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { PROGRESS_KEY, ProgressMap, getWeekProgress } from '../lib/progress';
 import { useActiveSession } from '../lib/session';
+import { useWeeks } from '../lib/programme/store';
 import { hapticSelect, hapticTap } from '../lib/feedback';
 import { useEntranceOnce } from '../lib/animation';
 import { coerceHistory, getWeekStreak, CompletedWorkout, HISTORY_KEY } from '../lib/history';
@@ -17,10 +17,10 @@ import { cn } from '../lib/utils';
 
 const CURRENT_WEEK_KEY = 'vb-current-week-v1';
 
-function readWeekOverride(): number | null {
+function readWeekOverride(maxWeek: number): number | null {
   try {
     const v = JSON.parse(window.localStorage.getItem(CURRENT_WEEK_KEY) ?? 'null');
-    return typeof v === 'number' && v >= 1 && v <= TRAINING_PLAN.length ? v : null;
+    return typeof v === 'number' && v >= 1 && v <= maxWeek ? v : null;
   } catch {
     return null;
   }
@@ -28,8 +28,8 @@ function readWeekOverride(): number | null {
 
 // Not useLocalStorage: "Automatic" must REMOVE the key (the hook can only write
 // JSON values, and a stored "null" is indistinguishable from garbage on read).
-function useWeekOverride() {
-  const [override, setOverride] = useState<number | null>(readWeekOverride);
+function useWeekOverride(maxWeek: number) {
+  const [override, setOverride] = useState<number | null>(() => readWeekOverride(maxWeek));
   const choose = (n: number | null) => {
     if (n === null) window.localStorage.removeItem(CURRENT_WEEK_KEY);
     else window.localStorage.setItem(CURRENT_WEEK_KEY, JSON.stringify(n));
@@ -49,6 +49,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
   const entered = useEntranceOnce('home');
+  const weeks = useWeeks();
   const [completedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
   const [historyRaw] = useLocalStorage<CompletedWorkout[]>(HISTORY_KEY, []);
   const streak = getWeekStreak(coerceHistory(historyRaw));
@@ -57,17 +58,17 @@ export default function HomePage() {
   const [recentPrs] = useState(() => listPrs(getBests()).slice(0, 3));
 
   // Resume point: manual override if set, else the first week with incomplete sets.
-  const [weekOverride, chooseWeek] = useWeekOverride();
+  const [weekOverride, chooseWeek] = useWeekOverride(weeks.length);
   const [weekSheetOpen, setWeekSheetOpen] = useState(false);
   const currentWeek =
-    (weekOverride !== null ? TRAINING_PLAN.find((w) => w.weekNumber === weekOverride) : undefined) ??
-    TRAINING_PLAN.find((w) => getWeekProgress(w, completedSets).percentage < 100) ??
-    TRAINING_PLAN[TRAINING_PLAN.length - 1];
+    (weekOverride !== null ? weeks.find((w) => w.weekNumber === weekOverride) : undefined) ??
+    weeks.find((w) => getWeekProgress(w, completedSets).percentage < 100) ??
+    weeks[weeks.length - 1];
   const weekProgress = getWeekProgress(currentWeek, completedSets);
 
   let sessionTitle: string | null = null;
   if (session) {
-    for (const week of TRAINING_PLAN) {
+    for (const week of weeks) {
       const found = week.days.find((d) => d.id === session.dayId);
       if (found) {
         sessionTitle = found.title.split(': ')[1] || found.title;
@@ -184,7 +185,7 @@ export default function HomePage() {
                 setWeekSheetOpen(false);
               }}
             />
-            {TRAINING_PLAN.map((week) => (
+            {weeks.map((week) => (
               <WeekOption
                 key={week.id}
                 label={`Week ${week.weekNumber}`}

@@ -3,7 +3,7 @@ import { themeColor } from '../lib/themes';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import { Share } from 'lucide-react';
-import { TRAINING_PLAN, WorkoutDay } from '../data';
+import { WorkoutDay } from '../data';
 import { formatElapsed } from './WorkoutPage';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { hapticTap, hapticSelect } from '../lib/feedback';
@@ -11,6 +11,7 @@ import { renderShareCard, shareImage, downloadImage } from '../lib/share';
 import { coerceHistory, getWeekStreak, CompletedWorkout, HISTORY_KEY } from '../lib/history';
 import { MonthCalendar } from '../components/MonthCalendar';
 import { BottomSheet } from '../components/BottomSheet';
+import { useWeeks } from '../lib/programme/store';
 
 type CongratsState = {
   elapsed: number;
@@ -66,6 +67,7 @@ export default function CongratsPage() {
   const location = useLocation();
   const reduceMotion = useReducedMotion();
 
+  const weeks = useWeeks();
   const [historyRaw] = useLocalStorage<CompletedWorkout[]>(HISTORY_KEY, []);
   const history = coerceHistory(historyRaw);
   const [shareBusy, setShareBusy] = useState(false);
@@ -74,7 +76,7 @@ export default function CongratsPage() {
 
   let day: WorkoutDay | undefined;
   let weekNum = 1;
-  for (const week of TRAINING_PLAN) {
+  for (const week of weeks) {
     const found = week.days.find((d) => d.id === id);
     if (found) {
       day = found;

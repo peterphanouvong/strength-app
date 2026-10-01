@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, Medal } from 'lucide-react';
-import { TRAINING_PLAN, Exercise } from '../data';
+import { Exercise, WeekPlan } from '../data';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { PROGRESS_KEY, ProgressMap } from '../lib/progress';
 import { getBests, PersonalBest } from '../lib/bests';
 import { ExerciseHistory } from '../components/ExerciseHistory';
 import { hapticTap } from '../lib/feedback';
+import { useWeeks } from '../lib/programme/store';
 
 /** First plan instance of the exercise — name and tracking are stable across weeks. */
-function findExercise(name: string): Exercise | undefined {
-  for (const week of TRAINING_PLAN) {
+function findExercise(weeks: WeekPlan[], name: string): Exercise | undefined {
+  for (const week of weeks) {
     for (const day of week.days) {
       const e = day.exercises.find((x) => x.name === name);
       if (e) return e;
@@ -27,10 +28,11 @@ function bestDate(at: number): string | null {
 export default function ExercisePage() {
   const { name } = useParams<{ name: string }>();
   const navigate = useNavigate();
+  const weeks = useWeeks();
   const [completedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
 
   const exerciseName = decodeURIComponent(name ?? '');
-  const exercise = findExercise(exerciseName);
+  const exercise = findExercise(weeks, exerciseName);
   const [pb] = useState<PersonalBest | undefined>(() => (exercise ? getBests()[exerciseName] : undefined));
 
   if (!exercise) {

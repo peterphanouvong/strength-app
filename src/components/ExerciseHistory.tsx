@@ -1,7 +1,8 @@
 import React from 'react';
-import { TRAINING_PLAN, Exercise } from '../data';
+import { Exercise } from '../data';
 import { ProgressMap, SetType } from '../lib/progress';
 import { cn } from '../lib/utils';
+import { useWeeks } from '../lib/programme/store';
 
 export const SET_TYPE_COLOR: Record<SetType, string> = { W: 'text-accent', F: 'text-danger', D: 'text-secondary' };
 
@@ -15,6 +16,7 @@ export const ExerciseHistory: React.FC<{ exercise: Exercise; completedSets: Prog
   exercise,
   completedSets,
 }) => {
+  const weeks = useWeeks();
   type Entry = {
     weekNumber: number;
     prescription: string;
@@ -23,7 +25,7 @@ export const ExerciseHistory: React.FC<{ exercise: Exercise; completedSets: Prog
   };
 
   const entries: Entry[] = [];
-  for (const week of TRAINING_PLAN) {
+  for (const week of weeks) {
     for (const d of week.days) {
       const e = d.exercises.find((x) => x.name === exercise.name);
       if (!e) continue;

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, Check, Timer, Plus, X, History, Medal, MoreVertical } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
-import { TRAINING_PLAN, WorkoutDay, Exercise } from '../data';
+import { WorkoutDay, Exercise } from '../data';
 import { cn } from '../lib/utils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { PROGRESS_KEY, ProgressMap, SetLog, SetType, getDayProgress, getDayVolume } from '../lib/progress';
@@ -27,6 +27,7 @@ import { ActiveSession, getActiveSession, startSession, endSession } from '../li
 import { recordSetBest } from '../lib/bests';
 import { ExerciseHistory, SET_TYPE_COLOR } from '../components/ExerciseHistory';
 import { useEntranceOnce } from '../lib/animation';
+import { useWeeks } from '../lib/programme/store';
 
 const REST_OVERRIDES_KEY = 'vb-rest-overrides-v1';
 
@@ -134,12 +135,13 @@ export default function WorkoutPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
+  const weeks = useWeeks();
 
   // Find the day across all weeks (before any session side effects — an invalid
   // id must never start a session, only render the not-found page below).
   let day: WorkoutDay | undefined;
   let weekNum = 1;
-  for (const week of TRAINING_PLAN) {
+  for (const week of weeks) {
     const found = week.days.find((d) => d.id === id);
     if (found) {
       day = found;
@@ -332,7 +334,7 @@ export default function WorkoutPage() {
     if (currentWeekNum === 1) return null;
 
     for (let w = currentWeekNum - 1; w >= 1; w--) {
-      const prevWeek = TRAINING_PLAN.find((plan) => plan.weekNumber === w);
+      const prevWeek = weeks.find((plan) => plan.weekNumber === w);
       if (!prevWeek) continue;
 
       for (const d of prevWeek.days) {
@@ -704,8 +706,9 @@ const ConflictContent: React.FC<{
   onTakeOver: () => void;
   onDiscardOther: () => void;
 }> = ({ conflict, onResume, onTakeOver, onDiscardOther }) => {
+  const weeks = useWeeks();
   let title = 'Another workout';
-  for (const week of TRAINING_PLAN) {
+  for (const week of weeks) {
     const found = week.days.find((d) => d.id === conflict.dayId);
     if (found) {
       title = found.title.split(': ')[1] || found.title;
