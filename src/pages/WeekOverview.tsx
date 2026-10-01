@@ -32,7 +32,9 @@ export default function WeekOverview() {
   const [completedSets] = useLocalStorage<ProgressMap>(PROGRESS_KEY, {});
   const weeks = useWeeks();
   const [dayMenu, setDayMenu] = useState<WorkoutDay | null>(null);
-  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  // 'confirm' = actionable (warning, or a clean ask) — offers "Remove anyway".
+  // 'blocked' = a hard dry-run/apply error — message only, no destructive action offered.
+  const [confirmRemove, setConfirmRemove] = useState<{ kind: 'confirm' | 'blocked'; message: string } | null>(null);
 
   const week = weeks.find((w) => w.weekNumber === Number(weekNumber));
 
@@ -141,33 +143,49 @@ export default function WeekOverview() {
             </div>
             {confirmRemove ? (
               <div className="bg-danger/10 rounded-xl px-4 py-3.5">
-                <p className="text-sm font-bold text-danger text-center mb-3">{confirmRemove}</p>
-                <button
-                  onClick={() => {
-                    hapticSelect();
-                    applyEdits([{ type: 'remove-day', dayId: dayMenu.id }]);
-                    setDayMenu(null);
-                    setConfirmRemove(null);
-                  }}
-                  className="w-full bg-danger text-ink font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
-                >
-                  Remove anyway
-                </button>
+                <p className="text-sm font-bold text-danger text-center mb-3">{confirmRemove.message}</p>
+                {confirmRemove.kind === 'blocked' ? (
+                  <button
+                    onClick={() => {
+                      hapticTap();
+                      setConfirmRemove(null);
+                    }}
+                    className="w-full bg-ink/10 hover:bg-ink/20 font-bold text-sm py-3.5 rounded-xl transition-colors"
+                  >
+                    Got it
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      hapticSelect();
+                      const res = applyEdits([{ type: 'remove-day', dayId: dayMenu.id }]);
+                      if (res.ok === false) {
+                        setConfirmRemove({ kind: 'blocked', message: res.errors[0].message });
+                        return;
+                      }
+                      setDayMenu(null);
+                      setConfirmRemove(null);
+                    }}
+                    className="w-full bg-danger text-ink font-bold text-sm py-3.5 rounded-xl transition-transform active:scale-[0.98]"
+                  >
+                    Remove anyway
+                  </button>
+                )}
               </div>
             ) : (
               <button
                 onClick={() => {
                   hapticSelect();
                   const dry = applyOps(getProgramme(), [{ type: 'remove-day', dayId: dayMenu.id }], completedSets);
-                  if (dry.ok && dry.warnings.length > 0) {
-                    setConfirmRemove(dry.warnings[0].message);
-                    return;
-                  }
                   if (dry.ok === false) {
-                    setConfirmRemove(dry.errors[0].message);
+                    setConfirmRemove({ kind: 'blocked', message: dry.errors[0].message });
                     return;
                   }
-                  setConfirmRemove(`Remove ${dayMenu.title} from week ${week.weekNumber}?`);
+                  if (dry.warnings.length > 0) {
+                    setConfirmRemove({ kind: 'confirm', message: dry.warnings[0].message });
+                    return;
+                  }
+                  setConfirmRemove({ kind: 'confirm', message: `Remove ${dayMenu.title} from week ${week.weekNumber}?` });
                 }}
                 className="w-full flex items-center justify-center gap-1.5 bg-ink/10 hover:bg-ink/20 text-danger font-bold text-sm py-3.5 rounded-xl transition-colors"
               >
@@ -324,7 +342,7 @@ const DayCard: React.FC<{
             )}
             {onMenu && (
               <button
-                onClick={() => onMenu()}
+                onClick={onMenu}
                 aria-label={`Day options for ${day.title}`}
                 className="relative z-10 w-8 h-8 rounded-full bg-ink/10 hover:bg-ink/20 flex items-center justify-center flex-shrink-0 transition-colors"
               >
