@@ -27,6 +27,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run test:unit
       - run: GHPAGES=1 npm run build
       - name: SPA fallback
         run: cp dist/index.html dist/404.html
