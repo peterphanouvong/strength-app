@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -26,7 +27,8 @@
     "tailwind-merge": "^3.6.0",
     "uuid": "^14.0.2",
     "vite": "^6.2.3",
-    "web-haptics": "^0.0.6"
+    "web-haptics": "^0.0.6",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
@@ -34,10 +36,12 @@
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
+    "happy-dom": "^20.14.5",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.3",
-    "vite-plugin-pwa": "^1.3.0"
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^5.0.3"
   }
 }
