@@ -10,3 +10,7 @@ node_modules/@playwright
 test-results/
 playwright-report/
 docs/gauntlet/
+
+# claude worktrees + sdd scratch
+.claude/worktrees/
+.superpowers/
