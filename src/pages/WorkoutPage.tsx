@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, Check, Timer, Plus, X, History, Medal, MoreVertical, Pencil, RotateCcw } from 'lucide-react';
+import { ChevronLeft, Check, Timer, Plus, Minus, X, History, Medal, MoreVertical, Pencil, RotateCcw } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { WorkoutDay, Exercise } from '../data';
 import { cn } from '../lib/utils';
@@ -27,7 +27,7 @@ import { ActiveSession, getActiveSession, startSession, endSession } from '../li
 import { recordSetBest } from '../lib/bests';
 import { ExerciseHistory, SET_TYPE_COLOR } from '../components/ExerciseHistory';
 import { useEntranceOnce } from '../lib/animation';
-import { useWeeks, undoLast, getUndoCount } from '../lib/programme/store';
+import { useWeeks, undoLast, getUndoCount, applyEdits } from '../lib/programme/store';
 import { EditExerciseSheet } from '../components/EditExerciseSheet';
 import { formatElapsed } from '../lib/time';
 
@@ -207,6 +207,18 @@ export default function WorkoutPage() {
   const volume = getDayVolume(day, completedSets);
 
   const restFor = (exercise: Exercise) => restOverrides[exercise.name] ?? exercise.restSec;
+
+  // Inline Hevy-style set editing: a deliberate exception to "edit mode is
+  // preview-only" — adding a set mid-workout is exactly when you want it.
+  // Both go through the engine, so they persist, warn, and undo like any edit.
+  const addSet = (exercise: Exercise) => {
+    hapticSelect();
+    applyEdits([{ type: 'update-exercise', exerciseId: exercise.id, patch: { sets: exercise.sets + 1 } }]);
+  };
+  const removeLastSet = (exercise: Exercise) => {
+    hapticTap();
+    applyEdits([{ type: 'update-exercise', exerciseId: exercise.id, patch: { sets: exercise.sets - 1 } }]);
+  };
 
   /** Remove every logged entry for a day from the progress map (discard semantics). */
   const clearDayProgress = (targetDayId: string) => {
@@ -480,6 +492,8 @@ export default function WorkoutPage() {
                 onConfigureRest={() => setRestTarget(exercise)}
                 onShowHistory={() => setHistoryTarget(exercise)}
                 onEdit={editMode && !live ? () => setEditTarget({ exercise }) : undefined}
+                onAddSet={live || editMode ? () => addSet(exercise) : undefined}
+                onRemoveLastSet={live || editMode ? () => removeLastSet(exercise) : undefined}
               />
             </motion.section>
           ))}
@@ -856,6 +870,8 @@ const ExerciseSection: React.FC<{
   onConfigureRest: () => void;
   onShowHistory: () => void;
   onEdit?: () => void;
+  onAddSet?: () => void;
+  onRemoveLastSet?: () => void;
 }> = ({
   exercise,
   index,
@@ -872,8 +888,14 @@ const ExerciseSection: React.FC<{
   onConfigureRest,
   onShowHistory,
   onEdit,
+  onAddSet,
+  onRemoveLastSet,
 }) => {
   const tracking = exercise.tracking;
+  // Removing the last set is only offered while that row has no logged data —
+  // set logs key off the index, so a logged row must go through the edit
+  // sheet's warning flow instead of a one-tap inline control.
+  const lastSetUntouched = !completedSets[`${exercise.id}-${exercise.sets - 1}`];
 
   return (
     <div>
@@ -1082,6 +1104,28 @@ const ExerciseSection: React.FC<{
           );
         })}
       </div>
+
+      {/* Inline set editing (live workout or preview edit mode) */}
+      {onAddSet && (
+        <div className="flex gap-1.5 mt-1.5">
+          <button
+            onClick={onAddSet}
+            aria-label={`Add set to ${exercise.name}`}
+            className="flex-1 flex items-center justify-center gap-1.5 bg-ink/5 hover:bg-ink/10 text-secondary hover:text-ink font-bold text-[0.8125rem] py-2.5 rounded-xl transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Add set
+          </button>
+          {onRemoveLastSet && exercise.sets > 1 && lastSetUntouched && (
+            <button
+              onClick={onRemoveLastSet}
+              aria-label={`Remove last set from ${exercise.name}`}
+              className="w-11 flex items-center justify-center bg-ink/5 hover:bg-ink/10 text-secondary hover:text-danger rounded-xl transition-colors"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
