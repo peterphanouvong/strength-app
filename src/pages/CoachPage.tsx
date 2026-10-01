@@ -4,12 +4,17 @@ import { motion } from 'motion/react';
 import { ArrowUp, Check, RotateCcw, Sparkles, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { hapticSelect, hapticTap } from '../lib/feedback';
-import { coachChat, CoachAuthError, getCoachToken } from '../lib/coach/api';
-import { ProposeEditsInput } from '../lib/programme/ops';
+import { coachChat, CoachAuthError, CoachRequestError, getCoachToken } from '../lib/coach/api';
+import { ProposeEditsInput, ProposeEditsInputSchema } from '../lib/programme/ops';
 import { describeOps } from '../lib/programme/describe';
 import { applyEdits, getProgramme, undoLast, useProgramme } from '../lib/programme/store';
+import { getActiveSession, endSession } from '../lib/session';
 
 const CHAT_KEY = 'vb-coach-chat-v1';
+// Mirrors the server's ChatBody caps (supabase/functions/ai-coach/index.ts) — the
+// client must stay under them or every send 400s once history grows.
+const MAX_REPLAY_MESSAGES = 40;
+const MAX_MESSAGE_CHARS = 4000;
 
 type ChatMsg = {
   role: 'user' | 'assistant';
@@ -17,6 +22,7 @@ type ChatMsg = {
   proposal?: ProposeEditsInput | null;
   proposalState?: 'pending' | 'applied' | 'dismissed' | 'failed';
   diffLines?: string[];
+  appliedRevision?: number;
   error?: string;
   at: number;
 };
@@ -55,22 +61,42 @@ export default function CoachPage() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, busy]);
 
-  const send = async () => {
-    const content = input.trim();
+  const send = async (explicit?: string) => {
+    const content = (explicit ?? input).trim();
     if (!content || busy) return;
     hapticSelect();
-    setInput('');
+    if (explicit === undefined) setInput('');
     const history = [...messages, { role: 'user' as const, content, at: Date.now() }];
     setMessages(history);
     setBusy(true);
     try {
-      const reply = await coachChat(
-        history.filter((m) => !m.error).map((m) => ({ role: m.role, content: m.content }))
-      );
-      const diffLines = reply.proposal ? describeOps(reply.proposal.ops, getProgramme()) : undefined;
+      // A text-less tool-call reply gets stored with content: '' — replaying it
+      // would push a message under the server's min(1) content length and 400
+      // every send after. Also cap how much history we replay: the server
+      // rejects more than 60 messages, each up to 4000 chars.
+      const replay = history
+        .filter((m) => !m.error && m.content.trim().length > 0)
+        .slice(-MAX_REPLAY_MESSAGES)
+        .map((m) => ({ role: m.role, content: m.content }));
+      const reply = await coachChat(replay);
+      let proposalState: ChatMsg['proposalState'] | undefined;
+      let diffLines: string[] | undefined;
+      let error: string | undefined;
+      if (reply.proposal) {
+        // The server already validates the tool call, but never trust a typed
+        // return value from the network — re-validate before offering Apply.
+        const parsed = ProposeEditsInputSchema.safeParse(reply.proposal);
+        if (parsed.success) {
+          proposalState = 'pending';
+          diffLines = describeOps(parsed.data.ops, getProgramme());
+        } else {
+          proposalState = 'failed';
+          error = `The coach proposed an invalid edit: ${parsed.error.issues[0]?.message ?? 'invalid proposal'}`;
+        }
+      }
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: reply.text, proposal: reply.proposal, proposalState: reply.proposal ? 'pending' : undefined, diffLines, at: Date.now() },
+        { role: 'assistant', content: reply.text, proposal: reply.proposal, proposalState, diffLines, error, at: Date.now() },
       ]);
       setAuthNeeded(false);
     } catch (e) {
@@ -78,6 +104,11 @@ export default function CoachPage() {
         // The banner below is the single "set it in Profile" affordance —
         // avoid a second, redundant mention in a chat bubble.
         setAuthNeeded(true);
+      } else if (e instanceof CoachRequestError) {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: '', error: "The coach couldn't process that request.", at: Date.now() },
+        ]);
       } else {
         setMessages((prev) => [
           ...prev,
@@ -96,11 +127,27 @@ export default function CoachPage() {
     const res = applyEdits(msg.proposal.ops);
     let proposalState: ChatMsg['proposalState'] = 'applied';
     let error: string | undefined;
+    let appliedRevision: number | undefined;
     if (res.ok === false) {
       proposalState = 'failed';
       error = `Couldn't apply: ${res.errors[0].message}`;
+    } else {
+      appliedRevision = getProgramme().revision;
+      // The applied edit may have removed the day the user is mid-session on
+      // (remove-day/remove-week/replace-week) — don't leave a session pointing
+      // at a day that no longer exists.
+      const active = getActiveSession();
+      if (active && !getProgramme().weeks.some((w) => w.days.some((d) => d.id === active.dayId))) {
+        endSession(active.dayId);
+      }
     }
-    setMessages((prev) => prev.map((m, i) => (i === index ? { ...m, proposalState, error } : m)));
+    setMessages((prev) => prev.map((m, i) => (i === index ? { ...m, proposalState, error, appliedRevision } : m)));
+  };
+
+  const askCoachToFix = (index: number) => {
+    const msg = messages[index];
+    hapticTap();
+    void send(`That edit failed: ${msg.error ?? 'unknown error'}. Please propose a different edit that fixes this.`);
   };
 
   const dismissProposal = (index: number) => {
@@ -139,10 +186,14 @@ export default function CoachPage() {
                   <div
                     className={cn(
                       'rounded-2xl px-4 py-3 text-sm leading-relaxed',
-                      msg.role === 'user' ? 'bg-primary text-onfill' : msg.error ? 'bg-danger/10 text-danger font-medium' : 'bg-ink/10'
+                      msg.role === 'user'
+                        ? 'bg-primary text-onfill'
+                        : !msg.content && msg.error
+                          ? 'bg-danger/10 text-danger font-medium'
+                          : 'bg-ink/10'
                     )}
                   >
-                    {msg.error ?? msg.content}
+                    {msg.content || msg.error}
                   </div>
                 )}
 
@@ -168,13 +219,22 @@ export default function CoachPage() {
                     {msg.proposalState === 'applied' && (
                       <div className="flex items-center justify-between mt-3.5">
                         <p className="text-xs font-bold text-primary flex items-center gap-1.5"><Check className="w-3.5 h-3.5" strokeWidth={3} /> Applied</p>
-                        <button onClick={() => { hapticTap(); undoLast(); dismissProposal(i); }} className="flex items-center gap-1 text-xs font-bold text-secondary hover:text-ink transition-colors">
-                          <RotateCcw className="w-3.5 h-3.5" /> Undo
-                        </button>
+                        {programme.revision === msg.appliedRevision && (
+                          <button onClick={() => { hapticTap(); undoLast(); dismissProposal(i); }} className="flex items-center gap-1 text-xs font-bold text-secondary hover:text-ink transition-colors">
+                            <RotateCcw className="w-3.5 h-3.5" /> Undo
+                          </button>
+                        )}
                       </div>
                     )}
                     {msg.proposalState === 'dismissed' && <p className="text-xs font-bold text-secondary mt-3.5">Dismissed</p>}
-                    {msg.proposalState === 'failed' && <p className="text-xs font-bold text-danger mt-3.5">{msg.error}</p>}
+                    {msg.proposalState === 'failed' && (
+                      <div className="mt-3.5 space-y-2">
+                        <p className="text-xs font-bold text-danger">{msg.error}</p>
+                        <button onClick={() => askCoachToFix(i)} className="text-xs font-bold text-secondary hover:text-ink transition-colors underline">
+                          Ask coach to fix
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -209,6 +269,7 @@ export default function CoachPage() {
               }
             }}
             rows={1}
+            maxLength={MAX_MESSAGE_CHARS}
             placeholder="Ask the coach…"
             className="flex-1 bg-transparent resize-none px-3 py-2.5 text-sm text-ink placeholder:text-secondary focus:outline-none max-h-32"
           />

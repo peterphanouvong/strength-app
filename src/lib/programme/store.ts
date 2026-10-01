@@ -6,7 +6,7 @@ import { useSyncExternalStore } from 'react';
 import { WeekPlan, TRAINING_PLAN } from '../../data';
 import { ProgressMap, PROGRESS_KEY } from '../progress';
 import { Programme, Profile } from './types';
-import { EditOp } from './ops';
+import { EditOp, EditOpsSchema } from './ops';
 import { applyOps, ApplyResult } from './engine';
 import { describeOps } from './describe';
 
@@ -28,7 +28,16 @@ function coerceProgramme(value: unknown): Programme | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const p = value as Programme;
   if (typeof p.id !== 'string' || typeof p.revision !== 'number' || !Array.isArray(p.weeks)) return null;
-  if (!p.weeks.every((w) => w && typeof w.id === 'string' && Array.isArray(w.days))) return null;
+  if (
+    !p.weeks.every(
+      (w) =>
+        w &&
+        typeof w.id === 'string' &&
+        Array.isArray(w.days) &&
+        w.days.every((d) => d && typeof d.id === 'string' && Array.isArray(d.exercises))
+    )
+  )
+    return null;
   return p;
 }
 
@@ -114,10 +123,15 @@ function writeUndo(entries: UndoEntry[]) {
 }
 
 export function applyEdits(ops: EditOp[]): ApplyResult {
+  const parsed = EditOpsSchema.safeParse(ops);
+  if (parsed.success === false) {
+    const issue = parsed.error.issues[0];
+    return { ok: false, errors: [{ opIndex: -1, message: issue?.message ?? 'Invalid edit.' }] };
+  }
   const current = getProgramme();
-  const result = applyOps(current, ops, readProgress());
+  const result = applyOps(current, parsed.data, readProgress());
   if (!result.ok) return result;
-  const label = describeOps(ops, current)[0] ?? 'Edit';
+  const label = describeOps(parsed.data, current)[0] ?? 'Edit';
   writeUndo([...readUndo(), { revision: current.revision, at: Date.now(), label, programme: current }]);
   cache = result.programme;
   persist(cache);

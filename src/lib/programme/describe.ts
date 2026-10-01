@@ -95,6 +95,8 @@ export function describeOps(ops: EditOp[], programme: Programme): string[] {
         return `Renamed programme → ${op.patch.name}`;
       case 'append-weeks':
         return `Added ${plural(op.weeks.length, 'week')} to the end of the programme`;
+      default:
+        return 'Unknown edit';
     }
   });
 }

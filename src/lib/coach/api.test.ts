@@ -36,4 +36,11 @@ describe('coachChat', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 500 })));
     await expect(coachChat([{ role: 'user', content: 'x' }])).rejects.toBeInstanceOf(CoachError);
   });
+
+  it('throws CoachRequestError (not a bare CoachError-as-unreachable) on 400', async () => {
+    localStorage.setItem('vb-coach-token-v1', 'tok');
+    const { coachChat, CoachRequestError } = await import(`./api?t=${Math.random().toString(36).slice(2)}`);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 400 })));
+    await expect(coachChat([{ role: 'user', content: 'x' }])).rejects.toBeInstanceOf(CoachRequestError);
+  });
 });

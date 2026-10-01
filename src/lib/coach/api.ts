@@ -9,6 +9,8 @@ export const COACH_TOKEN_KEY = 'vb-coach-token-v1';
 
 export class CoachError extends Error {}
 export class CoachAuthError extends CoachError {}
+/** 4xx (other than 401) — the request itself was rejected, not a reachability problem. */
+export class CoachRequestError extends CoachError {}
 
 export function getCoachToken(): string {
   try {
@@ -37,7 +39,8 @@ function readRecentWorkouts() {
 }
 
 function currentWeekNumber(): number {
-  // Mirrors HomePage: explicit override, else first incomplete week.
+  // Reads HomePage's explicit week override, if any; otherwise falls back to week 1
+  // (this does not replicate HomePage's "first incomplete week" inference).
   try {
     const v = JSON.parse(window.localStorage.getItem('vb-current-week-v1') ?? 'null');
     if (typeof v === 'number') return v;
@@ -54,6 +57,7 @@ async function post(body: unknown): Promise<Response> {
     body: JSON.stringify(body),
   });
   if (res.status === 401) throw new CoachAuthError('Coach access token is missing or wrong.');
+  if (res.status >= 400 && res.status < 500) throw new CoachRequestError(`Coach rejected the request (${res.status}).`);
   if (!res.ok) throw new CoachError(`Coach unavailable (${res.status}).`);
   return res;
 }

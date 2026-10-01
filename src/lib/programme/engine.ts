@@ -296,6 +296,8 @@ export function applyOps(programme: Programme, ops: EditOp[], progress: Progress
         for (const wp of op.weeks) weeks.push(materialiseWeek(wp, taken));
         break;
       }
+      default:
+        return fail('Unknown op type');
     }
   }
 
