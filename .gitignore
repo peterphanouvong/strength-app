@@ -14,3 +14,6 @@ docs/gauntlet/
 # claude worktrees + sdd scratch
 .claude/worktrees/
 .superpowers/
+
+# supabase local dev
+supabase/.temp
