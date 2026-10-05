@@ -309,7 +309,7 @@ export default function CoachPage() {
             rows={1}
             maxLength={MAX_MESSAGE_CHARS}
             placeholder="Ask the coach…"
-            className="flex-1 bg-transparent resize-none px-3 py-2.5 text-sm text-ink placeholder:text-secondary focus:outline-none max-h-32"
+            className="flex-1 bg-transparent resize-none px-3 py-2.5 text-base text-ink placeholder:text-secondary focus:outline-none max-h-32"
           />
           <button
             onClick={() => void send()}

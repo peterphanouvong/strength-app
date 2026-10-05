@@ -108,7 +108,7 @@ export const EditExerciseSheet: React.FC<{
     onClose();
   };
 
-  const field = 'w-full bg-ink/10 rounded-xl px-3.5 py-3 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary';
+  const field = 'w-full bg-ink/10 rounded-xl px-3.5 py-3 text-base font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary';
   const label = 'block text-[0.6875rem] font-bold text-secondary mb-1.5';
 
   return (

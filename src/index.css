@@ -22,9 +22,31 @@
 }
 
 @layer base {
+  html {
+    /* No grey flash on taps — buttons carry their own pressed states. */
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     @apply bg-surface text-ink antialiased;
     letter-spacing: -0.01em;
+    /* No rubber-band scroll past the app shell (native-app feel in standalone). */
+    overscroll-behavior-y: none;
+  }
+
+  /* Kill the double-tap-to-zoom heuristic on controls: taps dispatch
+     immediately instead of waiting to see if a second tap follows. */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  button,
+  a {
+    @apply select-none;
   }
 
   input::placeholder {

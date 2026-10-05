@@ -192,6 +192,29 @@ export default function WorkoutPage() {
     }
   }, [live]);
 
+  // Candidate previous-exercise ids per name, nearest week first. Precomputed
+  // because the page re-renders on every set tick and keystroke: scanning the
+  // whole programme per set row per render was the hottest path on a phone.
+  // (Must stay above the early return — hooks run unconditionally.)
+  const prevExerciseIdsByName = React.useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (let w = weekNum - 1; w >= 1; w--) {
+      const prevWeek = weeks.find((plan) => plan.weekNumber === w);
+      if (!prevWeek) continue;
+      for (const d of prevWeek.days) {
+        for (const e of d.exercises) {
+          const list = map.get(e.name);
+          if (list) {
+            list.push(e.id);
+          } else {
+            map.set(e.name, [e.id]);
+          }
+        }
+      }
+    }
+    return map;
+  }, [weeks, weekNum]);
+
   if (!day) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3">
@@ -370,22 +393,11 @@ export default function WorkoutPage() {
     setSetTypeTarget(null);
   };
 
-  const getPreviousSetLog = (exerciseName: string, currentWeekNum: number, setIndex: number) => {
-    if (currentWeekNum === 1) return null;
-
-    for (let w = currentWeekNum - 1; w >= 1; w--) {
-      const prevWeek = weeks.find((plan) => plan.weekNumber === w);
-      if (!prevWeek) continue;
-
-      for (const d of prevWeek.days) {
-        const prevExercise = d.exercises.find((e) => e.name === exerciseName);
-        if (prevExercise) {
-          const key = `${prevExercise.id}-${setIndex}`;
-          const log = completedSets[key];
-          if (log && log.completed && (log.weight || log.actualReps || log.timeSec)) {
-            return log;
-          }
-        }
+  const getPreviousSetLog = (exerciseName: string, _currentWeekNum: number, setIndex: number) => {
+    for (const prevId of prevExerciseIdsByName.get(exerciseName) ?? []) {
+      const log = completedSets[`${prevId}-${setIndex}`];
+      if (log && log.completed && (log.weight || log.actualReps || log.timeSec)) {
+        return log;
       }
     }
     return null;
@@ -979,7 +991,9 @@ const ExerciseSection: React.FC<{
           const prAt = prBadges[key];
 
           const inputClass = cn(
-            'w-full text-center rounded-lg py-2.5 text-sm font-bold tabular-nums text-ink',
+            // text-base, not text-sm: iOS auto-zooms the page on focus when a
+            // field's font-size is under 16px — the single worst "not an app" tell.
+            'w-full text-center rounded-lg py-2 text-base font-bold tabular-nums text-ink',
             'bg-ink/10 focus:outline-none focus:ring-2 focus:ring-primary',
             log.completed && 'bg-transparent',
             !live && 'opacity-60'

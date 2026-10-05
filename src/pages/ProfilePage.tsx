@@ -308,7 +308,7 @@ export default function ProfilePage() {
                 type="password"
                 value={coachTokenInput}
                 onChange={(e) => setCoachTokenInput(e.target.value)}
-                className="w-full bg-ink/10 rounded-xl px-3.5 py-3 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-ink/10 rounded-xl px-3.5 py-3 text-base font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <p className="text-xs text-secondary leading-relaxed mt-1.5">
                 Paste the access token from your Supabase secrets. Stored only on this device.
@@ -341,7 +341,7 @@ export default function ProfilePage() {
                 value={goals}
                 onChange={(e) => setGoals(e.target.value)}
                 rows={3}
-                className="w-full bg-ink/10 rounded-xl px-3.5 py-3 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                className="w-full bg-ink/10 rounded-xl px-3.5 py-3 text-base font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary resize-none"
               />
             </div>
             <div>
@@ -353,7 +353,7 @@ export default function ProfilePage() {
                 aria-label="Sport context"
                 value={sportContext}
                 onChange={(e) => setSportContext(e.target.value)}
-                className="w-full bg-ink/10 rounded-xl px-3.5 py-3 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-ink/10 rounded-xl px-3.5 py-3 text-base font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <div>
@@ -366,7 +366,7 @@ export default function ProfilePage() {
                 value={equipmentInput}
                 onChange={(e) => setEquipmentInput(e.target.value)}
                 placeholder="Barbell, dumbbells, bands…"
-                className="w-full bg-ink/10 rounded-xl px-3.5 py-3 text-sm font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-ink/10 rounded-xl px-3.5 py-3 text-base font-bold text-ink focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <div>
