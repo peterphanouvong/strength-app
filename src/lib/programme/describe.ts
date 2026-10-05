@@ -5,6 +5,32 @@ import { EditOp } from './ops';
 const rx = (e: { sets: number; reps: string; load?: string }) =>
   `${e.sets}×${e.reps}${e.load ? ` @ ${e.load}` : ''}`;
 
+type PayloadDay = { title: string; exercises: { name: string; sets: number; reps: string; load?: string }[] };
+
+const payloadDayLines = (day: PayloadDay): string[] => [
+  day.title,
+  ...day.exercises.map((e) => `  ${e.name} — ${rx(e)}`),
+];
+
+/**
+ * Exercise-level preview lines for ops that carry full day/week payloads —
+ * what the coach's "Show details" expands to. Ops without payloads (their
+ * one-line description already says everything) return [].
+ */
+export function describeOpDetails(op: EditOp): string[] {
+  switch (op.type) {
+    case 'replace-day':
+    case 'add-day':
+      return payloadDayLines(op.day);
+    case 'replace-week':
+      return op.week.days.flatMap(payloadDayLines);
+    case 'append-weeks':
+      return op.weeks.flatMap((w) => w.days.flatMap(payloadDayLines));
+    default:
+      return [];
+  }
+}
+
 const dayLetter = (title: string) => title.split(':')[0];
 
 function find(weeks: WeekPlan[], exerciseId: string) {

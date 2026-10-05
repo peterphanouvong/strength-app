@@ -30,7 +30,8 @@ Rules:
 - Target ids must come from the provided programme JSON — never invent ids. To keep an exercise's logged history in a replace payload, carry its existing id.
 - Respect periodisation: taper leg volume and intensity in the 48-72h before a competition; keep movement intent (speed/power) when cutting volume.
 - If the user asks something that needs no programme change, just answer — don't force an edit.
-- One propose_edits call per reply at most, with a one-sentence summary.`;
+- One propose_edits call per reply at most, with a one-sentence summary.
+- When you propose edits, your text reply must briefly walk the user through what changes and why: name what's coming out, what's going in, and the reasoning (2-4 short lines). The card shows the mechanical diff; your text is the coaching.`;
 
 const ChatBody = z.object({
   action: z.literal('chat'),

@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ArrowUp, Check, RotateCcw, Sparkles, X } from 'lucide-react';
+import { ArrowUp, Check, ChevronDown, RotateCcw, Sparkles, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { hapticSelect, hapticTap } from '../lib/feedback';
 import { coachChat, CoachAuthError, CoachRequestError, getCoachToken } from '../lib/coach/api';
 import { ProposeEditsInput, ProposeEditsInputSchema } from '../lib/programme/ops';
-import { describeOps } from '../lib/programme/describe';
+import { describeOps, describeOpDetails } from '../lib/programme/describe';
 import { applyEdits, getProgramme, undoLast, useProgramme } from '../lib/programme/store';
 import { getActiveSession, endSession } from '../lib/session';
 
@@ -52,6 +52,8 @@ export default function CoachPage() {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [authNeeded, setAuthNeeded] = useState(!getCoachToken());
+  // Message indexes whose exercise-level preview is expanded (UI-only state).
+  const [openDetails, setOpenDetails] = useState<Record<number, boolean>>({});
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -206,6 +208,42 @@ export default function CoachPage() {
                         <li key={line} className="text-xs text-ink/85 leading-relaxed border-l-2 border-accent pl-2.5">{line}</li>
                       ))}
                     </ul>
+                    {(() => {
+                      const detailLines = msg.proposal.ops.flatMap(describeOpDetails);
+                      if (detailLines.length === 0) return null;
+                      const open = openDetails[i] === true;
+                      return (
+                        <div className="mt-2.5">
+                          <button
+                            onClick={() => {
+                              hapticTap();
+                              setOpenDetails((prev) => ({ ...prev, [i]: !open }));
+                            }}
+                            className="flex items-center gap-1 text-xs font-bold text-secondary hover:text-ink transition-colors"
+                          >
+                            <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', open && 'rotate-180')} />
+                            {open ? 'Hide details' : 'Show details'}
+                          </button>
+                          {open && (
+                            <ul className="mt-2 space-y-1">
+                              {detailLines.map((line, li) => (
+                                <li
+                                  key={`${li}-${line}`}
+                                  className={cn(
+                                    'text-xs leading-relaxed',
+                                    line.startsWith('  ')
+                                      ? 'pl-5 text-ink/75 tabular-nums'
+                                      : 'pl-2.5 font-bold text-ink/90 mt-1.5 first:mt-0'
+                                  )}
+                                >
+                                  {line.trim()}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })()}
                     {msg.proposalState === 'pending' && (
                       <div className="flex gap-2 mt-3.5">
                         <button onClick={() => applyProposal(i)} className="flex-1 flex items-center justify-center gap-1.5 bg-primary text-onfill font-bold text-sm py-2.5 rounded-xl transition-transform active:scale-[0.98]">

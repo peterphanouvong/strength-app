@@ -27,6 +27,44 @@ test('a proposal renders a diff card; apply mutates the programme', async ({ pag
   await expect(page.getByText('2 × 6')).toBeVisible();
 });
 
+test('a replace-day proposal can expand an exercise-level preview', async ({ page }) => {
+  const REPLACE_PROPOSAL = {
+    text: 'Swapping today for a short pre-comp primer.',
+    proposal: {
+      summary: 'Pre-comp primer instead of heavy lower',
+      ops: [
+        {
+          type: 'replace-day',
+          dayId: 'w1-d1',
+          day: {
+            id: 'w1-d1',
+            title: 'Day A: Pre-comp primer',
+            exercises: [
+              { id: 'w1-d1-e1', name: 'Hang Power Clean', sets: 3, reps: '2', load: '60%', tracking: 'weighted', restSec: 180 },
+              { name: 'Pogo Hops', sets: 2, reps: '10', tracking: 'reps', restSec: 60 },
+            ],
+          },
+        },
+      ],
+    },
+  };
+  await page.route('**/functions/v1/ai-coach', (route) => route.fulfill({ json: REPLACE_PROPOSAL }));
+  await page.goto('/coach');
+  await page.getByRole('textbox', { name: 'Message the coach' }).fill('Comp tomorrow — make today light');
+  await page.getByRole('button', { name: 'Send' }).click();
+
+  // Collapsed by default; the coarse diff line shows, the exercises don't.
+  await expect(page.getByText(/Replaced week 1 Day A/)).toBeVisible();
+  await expect(page.getByText('Pogo Hops — 2×10')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Show details' }).click();
+  await expect(page.getByText('Hang Power Clean — 3×2 @ 60%')).toBeVisible();
+  await expect(page.getByText('Pogo Hops — 2×10')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Hide details' }).click();
+  await expect(page.getByText('Pogo Hops — 2×10')).toHaveCount(0);
+});
+
 test('401 prompts for the access token', async ({ page }) => {
   await page.route('**/functions/v1/ai-coach', (route) => route.fulfill({ status: 401, json: { error: 'unauthorized' } }));
   await page.goto('/coach');
